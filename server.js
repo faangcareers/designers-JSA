@@ -7,6 +7,7 @@ import { lookup } from "node:dns/promises";
 import { URL } from "node:url";
 import * as cheerio from "cheerio";
 import { getAdapter } from "./adapters/index.js";
+import { parseGeneric } from "./adapters/generic.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -225,6 +226,23 @@ async function fetchJson(url, options = {}) {
   }
 }
 
+function mergeJobs(primary, secondary) {
+  const seen = new Set();
+  const merged = [];
+
+  const add = (job) => {
+    const key = `${job.title || ""}::${job.url || ""}`.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(job);
+  };
+
+  primary.forEach(add);
+  secondary.forEach(add);
+
+  return merged;
+}
+
 async function handleParse(req, res) {
   let body = "";
   for await (const chunk of req) body += chunk;
@@ -276,15 +294,23 @@ async function handleParse(req, res) {
   const warnings = collectWarnings(html, $);
 
   let jobs = [];
+  let adapterJobs = [];
   try {
-    jobs = await adapter.parse($, parsed.toString(), {
+    adapterJobs = await adapter.parse($, parsed.toString(), {
       company,
       fetchJson,
       cookies,
       finalUrl,
     });
   } catch (err) {
-    return json(res, 500, { error: "Failed to parse HTML" });
+    warnings.push("Adapter parsing failed; falling back to generic rules.");
+  }
+
+  if (adapter.name !== "generic") {
+    const genericJobs = parseGeneric($, parsed.toString(), { company });
+    jobs = mergeJobs(adapterJobs, genericJobs);
+  } else {
+    jobs = adapterJobs;
   }
 
   const response = {
