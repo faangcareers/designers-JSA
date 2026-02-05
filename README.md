@@ -71,10 +71,25 @@ These are generic examples and may or may not work depending on site changes:
 
 ## How extraction works
 
-- Generic heuristics find repeating blocks with design-related keywords.
+Extraction follows a layered pipeline:
+1. Domain adapters run first (VK, Spotify, Lever, etc.).
+2. Generic rules then run for additional coverage.
+3. Results are merged and deduplicated by `title + url`.
+
+Generic heuristics also apply:
+- Find repeating blocks with design-related keywords.
 - Titles come from prominent headers or anchors.
 - Locations are detected from nearby text.
 - Company is inferred from meta tags or hostname.
 - Duplicate jobs are removed by URL + title.
+
+## Adapters
+
+Specialized adapters exist for some domains to improve accuracy:
+- `team.vk.company` (VK careers)
+- `lifeatspotify.com` (Spotify careers)
+- `jobs.lever.co` (Lever boards, e.g. Bumble)
+
+If a domain doesn’t have a dedicated adapter, the generic parser is used.
 
 Extraction is best-effort and will vary by site structure.
