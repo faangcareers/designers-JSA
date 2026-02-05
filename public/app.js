@@ -150,8 +150,32 @@ function renderHistory(items) {
     meta.className = "history-meta";
     meta.textContent = entry.date;
 
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "copy-button";
+    copyButton.textContent = "Copy";
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(entry.url);
+        copyButton.textContent = "Copied";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1200);
+      } catch {
+        copyButton.textContent = "Failed";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1200);
+      }
+    });
+
+    const right = document.createElement("div");
+    right.className = "history-actions";
+    right.appendChild(copyButton);
+    right.appendChild(meta);
+
     li.appendChild(link);
-    li.appendChild(meta);
+    li.appendChild(right);
     fragment.appendChild(li);
   });
 

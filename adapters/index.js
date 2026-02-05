@@ -2,6 +2,7 @@ import { parseGeneric } from "./generic.js";
 import { parseLifeAtSpotify } from "./lifeatspotify.js";
 import { parseTeamVkCompany } from "./team-vk-company.js";
 import { parseRevolut } from "./revolut.js";
+import { parseLever } from "./lever.js";
 
 export function getAdapter(hostname) {
   if (hostname.endsWith("lifeatspotify.com")) {
@@ -22,6 +23,13 @@ export function getAdapter(hostname) {
     return {
       name: "revolut",
       parse: ($, baseUrl, context) => parseRevolut($, baseUrl, context),
+    };
+  }
+
+  if (hostname === "jobs.lever.co") {
+    return {
+      name: "lever",
+      parse: ($, baseUrl, context) => parseLever($, baseUrl, context),
     };
   }
 

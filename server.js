@@ -1,3 +1,4 @@
+import "dotenv/config";
 import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
@@ -14,6 +15,16 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const HOST = process.env.HOST || "127.0.0.1";
+const SCRAPINGBEE_API_KEY = process.env.SCRAPINGBEE_API_KEY || "";
+const SCRAPINGBEE_API_URL =
+  process.env.SCRAPINGBEE_API_URL || "https://app.scrapingbee.com/api/v1/";
+const SCRAPINGBEE_RENDER_JS = process.env.SCRAPINGBEE_RENDER_JS === "true";
+const SCRAPINGBEE_ALWAYS = process.env.SCRAPINGBEE_ALWAYS === "true";
+const ZYTE_API_KEY = process.env.ZYTE_API_KEY || "";
+const ZYTE_API_URL = process.env.ZYTE_API_URL || "https://api.zyte.com/v1/extract";
+const ZYTE_BROWSER_HTML = process.env.ZYTE_BROWSER_HTML !== "false";
+const ZYTE_STRUCTURED_DATA = process.env.ZYTE_STRUCTURED_DATA === "true";
+const ZYTE_ALWAYS = process.env.ZYTE_ALWAYS === "true";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MAX_BYTES = 1.5 * 1024 * 1024; // 1.5MB
 const FETCH_TIMEOUT_MS = 12000;
@@ -94,6 +105,10 @@ async function readStreamWithLimit(stream, limitBytes) {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchHtml(url, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -115,6 +130,13 @@ async function fetchHtml(url, options = {}) {
         redirect: "manual",
         signal: controller.signal,
       });
+
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("retry-after");
+        const waitMs = retryAfter ? Number(retryAfter) * 1000 : 800;
+        await sleep(Math.min(waitMs, 2000));
+        continue;
+      }
 
       if ([301, 302, 303, 307, 308].includes(res.status)) {
         const location = res.headers.get("location");
@@ -147,6 +169,36 @@ async function fetchHtml(url, options = {}) {
   }
 }
 
+async function fetchHtmlWithScrapingBee(url) {
+  if (!SCRAPINGBEE_API_KEY) {
+    throw new Error("ScrapingBee API key not configured");
+  }
+
+  const params = new URLSearchParams({
+    api_key: SCRAPINGBEE_API_KEY,
+    url,
+  });
+
+  if (SCRAPINGBEE_RENDER_JS) {
+    params.set("render_js", "true");
+  }
+
+  const requestUrl = `${SCRAPINGBEE_API_URL}?${params.toString()}`;
+  const res = await fetch(requestUrl, {
+    headers: {
+      "User-Agent": USER_AGENT,
+      "Accept": "text/html,application/xhtml+xml",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`ScrapingBee returned ${res.status}`);
+  }
+
+  const html = await readStreamWithLimit(res.body, MAX_BYTES);
+  return { html, cookies: "", finalUrl: url };
+}
+
 function getCompanyFromMeta($, hostname) {
   const candidates = [
     $("meta[property='og:site_name']").attr("content"),
@@ -177,6 +229,42 @@ function collectWarnings(html, $) {
   return warnings;
 }
 
+async function fetchHtmlWithZyte(url) {
+  if (!ZYTE_API_KEY) {
+    throw new Error("Zyte API key not configured");
+  }
+
+  const payload = {
+    url,
+    browserHtml: ZYTE_BROWSER_HTML,
+    structuredData: ZYTE_STRUCTURED_DATA,
+  };
+
+  const auth = Buffer.from(`${ZYTE_API_KEY}:`).toString("base64");
+  const res = await fetch(ZYTE_API_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${auth}`,
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT,
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Zyte returned ${res.status}`);
+  }
+
+  const body = await readStreamWithLimit(res.body, MAX_BYTES);
+  const data = JSON.parse(body);
+  const html = data.browserHtml || data.httpResponseBody || "";
+  if (!html) {
+    throw new Error("Zyte returned empty HTML");
+  }
+  return { html, cookies: "", finalUrl: url };
+}
+
 async function fetchJson(url, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -195,6 +283,13 @@ async function fetchJson(url, options = {}) {
         redirect: "manual",
         signal: controller.signal,
       });
+
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("retry-after");
+        const waitMs = retryAfter ? Number(retryAfter) * 1000 : 800;
+        await sleep(Math.min(waitMs, 2000));
+        continue;
+      }
 
       if ([301, 302, 303, 307, 308].includes(res.status)) {
         const location = res.headers.get("location");
@@ -280,12 +375,60 @@ async function handleParse(req, res) {
   let cookies = "";
   let finalUrl = parsed.toString();
   try {
-    const fetched = await fetchHtml(parsed.toString());
-    html = fetched.html;
-    cookies = fetched.cookies;
-    finalUrl = fetched.finalUrl;
+    if (ZYTE_API_KEY && ZYTE_ALWAYS) {
+      console.log(`Using Zyte for: ${parsed.toString()}`);
+      const fetched = await fetchHtmlWithZyte(parsed.toString());
+      html = fetched.html;
+      cookies = fetched.cookies;
+      finalUrl = fetched.finalUrl;
+    } else if (SCRAPINGBEE_API_KEY && SCRAPINGBEE_ALWAYS) {
+      console.log(`Using ScrapingBee for: ${parsed.toString()}`);
+      const fetched = await fetchHtmlWithScrapingBee(parsed.toString());
+      html = fetched.html;
+      cookies = fetched.cookies;
+      finalUrl = fetched.finalUrl;
+    } else {
+      const fetched = await fetchHtml(parsed.toString());
+      html = fetched.html;
+      cookies = fetched.cookies;
+      finalUrl = fetched.finalUrl;
+    }
   } catch (err) {
-    return json(res, 502, { error: err.message || "Failed to fetch URL" });
+    if (ZYTE_API_KEY && !ZYTE_ALWAYS) {
+      try {
+        console.log(`Direct fetch failed; retrying with Zyte: ${parsed.toString()}`);
+        const fetched = await fetchHtmlWithZyte(parsed.toString());
+        html = fetched.html;
+        cookies = fetched.cookies;
+        finalUrl = fetched.finalUrl;
+      } catch (zyteErr) {
+        if (SCRAPINGBEE_API_KEY && !SCRAPINGBEE_ALWAYS) {
+          try {
+            console.log(`Zyte failed; retrying with ScrapingBee: ${parsed.toString()}`);
+            const fetched = await fetchHtmlWithScrapingBee(parsed.toString());
+            html = fetched.html;
+            cookies = fetched.cookies;
+            finalUrl = fetched.finalUrl;
+          } catch (beeErr) {
+            return json(res, 502, { error: beeErr.message || "Failed to fetch URL" });
+          }
+        } else {
+          return json(res, 502, { error: zyteErr.message || "Failed to fetch URL" });
+        }
+      }
+    } else if (SCRAPINGBEE_API_KEY && !SCRAPINGBEE_ALWAYS) {
+      try {
+        console.log(`Direct fetch failed; retrying with ScrapingBee: ${parsed.toString()}`);
+        const fetched = await fetchHtmlWithScrapingBee(parsed.toString());
+        html = fetched.html;
+        cookies = fetched.cookies;
+        finalUrl = fetched.finalUrl;
+      } catch (beeErr) {
+        return json(res, 502, { error: beeErr.message || "Failed to fetch URL" });
+      }
+    } else {
+      return json(res, 502, { error: err.message || "Failed to fetch URL" });
+    }
   }
 
   const $ = cheerio.load(html);
@@ -356,6 +499,32 @@ async function serveStatic(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  async function fetchHtmlViaScrapingBee(targetUrl, { renderJs = true } = {}) {
+    const apiKey = process.env.SCRAPINGBEE_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing SCRAPINGBEE_API_KEY in environment.");
+    }
+
+    const endpoint = new URL("https://app.scrapingbee.com/api/v1/");
+    endpoint.searchParams.set("api_key", apiKey);
+    endpoint.searchParams.set("url", targetUrl);
+    endpoint.searchParams.set("render_js", renderJs ? "true" : "false");
+
+    const res = await fetch(endpoint.toString(), {
+      headers: { "Accept": "text/html" },
+    });
+
+    const html = await res.text();
+
+    if (!res.ok) {
+      throw new Error(
+        `ScrapingBee error ${res.status}: ${html.slice(0, 300)}`
+      );
+    }
+
+    return html;
+  }
+
   if (req.method === "POST" && req.url === "/api/parse") {
     return handleParse(req, res);
   }
