@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Designers Job Search Aggregator (Cards)</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Designers Job Search Aggregator</p>
+        <h1>Paste a job listings URL. Get clean cards.</h1>
+        <p class="subhead">
+          Best-effort extraction for designer roles across company career pages and job boards.
+        </p>
+      </header>
+
+      <section class="input-panel">
+        <label for="urlInput">Listings URL</label>
+        <div class="input-row">
+          <input id="urlInput" type="url" placeholder="https://company.com/careers?team=design" />
+          <button id="parseButton">Parse jobs</button>
+        </div>
+        <p class="hint">We fetch the URL server-side and parse the HTML. No secrets exposed.</p>
+      </section>
+
+      <section id="status" class="status hidden"></section>
+      <section id="warnings" class="warnings hidden"></section>
+
+      <section class="results">
+        <div class="results-header">
+          <h2>Results</h2>
+          <span id="resultsCount" class="count">0 jobs</span>
+        </div>
+        <div id="cards" class="cards"></div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
