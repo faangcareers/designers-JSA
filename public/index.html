@@ -9,7 +9,12 @@
   <body>
     <main class="page">
       <header class="hero">
-        <p class="eyebrow">Designers Job Search Aggregator</p>
+        <div class="hero-top">
+          <p class="eyebrow">Designers Job Search Aggregator</p>
+          <button id="themeToggle" class="theme-toggle" type="button">
+            Dark mode
+          </button>
+        </div>
         <h1>Paste a job listings URL. Get clean cards.</h1>
         <p class="subhead">
           Best-effort extraction for designer roles across company career pages and job boards.
@@ -34,6 +39,14 @@
           <span id="resultsCount" class="count">0 jobs</span>
         </div>
         <div id="cards" class="cards"></div>
+      </section>
+
+      <section class="history">
+        <div class="results-header">
+          <h2>History</h2>
+          <button id="clearHistory" class="theme-toggle" type="button">Clear</button>
+        </div>
+        <ul id="historyList" class="history-list"></ul>
       </section>
     </main>
 

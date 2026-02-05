@@ -4,6 +4,13 @@ const statusEl = document.getElementById("status");
 const warningsEl = document.getElementById("warnings");
 const cardsEl = document.getElementById("cards");
 const resultsCountEl = document.getElementById("resultsCount");
+const themeToggle = document.getElementById("themeToggle");
+const historyList = document.getElementById("historyList");
+const clearHistoryButton = document.getElementById("clearHistory");
+
+const THEME_KEY = "djsa-theme";
+const HISTORY_KEY = "djsa-history";
+const HISTORY_LIMIT = 20;
 
 function setStatus(message, type = "info") {
   statusEl.textContent = message;
@@ -89,6 +96,83 @@ function renderCards(jobs) {
   cardsEl.appendChild(fragment);
 }
 
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "dark") {
+    root.setAttribute("data-theme", "dark");
+    themeToggle.textContent = "Light mode";
+  } else {
+    root.removeAttribute("data-theme");
+    themeToggle.textContent = "Dark mode";
+  }
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved) {
+    applyTheme(saved);
+    return;
+  }
+
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(prefersDark ? "dark" : "light");
+}
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(items) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+}
+
+function renderHistory(items) {
+  historyList.innerHTML = "";
+  if (!items.length) {
+    historyList.innerHTML = "<li class=\"empty\">No history yet.</li>";
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  items.forEach((entry) => {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = entry.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = entry.url;
+
+    const meta = document.createElement("span");
+    meta.className = "history-meta";
+    meta.textContent = entry.date;
+
+    li.appendChild(link);
+    li.appendChild(meta);
+    fragment.appendChild(li);
+  });
+
+  historyList.appendChild(fragment);
+}
+
+function addToHistory(url) {
+  const items = loadHistory();
+  const existingIndex = items.findIndex((item) => item.url === url);
+  if (existingIndex >= 0) {
+    items.splice(existingIndex, 1);
+  }
+  items.unshift({
+    url,
+    date: new Date().toLocaleString(),
+  });
+  const trimmed = items.slice(0, HISTORY_LIMIT);
+  saveHistory(trimmed);
+  renderHistory(trimmed);
+}
+
 async function parseJobs() {
   const url = urlInput.value.trim();
   if (!url) {
@@ -115,6 +199,7 @@ async function parseJobs() {
     clearStatus();
     setWarnings(data.warnings);
     renderCards(data.jobs);
+    addToHistory(url);
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
   }
@@ -125,4 +210,19 @@ urlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     parseJobs();
   }
+});
+
+themeToggle.addEventListener("click", () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
+initTheme();
+renderHistory(loadHistory());
+
+clearHistoryButton.addEventListener("click", () => {
+  saveHistory([]);
+  renderHistory([]);
 });
