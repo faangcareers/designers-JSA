@@ -429,12 +429,21 @@ select {
 
 .job-title {
   display: block;
-  padding-right: 42px;
+  padding-right: 118px;
   color: inherit;
   text-decoration: none;
   font-size: clamp(1.75rem, 3.2vw, 2.15rem);
   line-height: 1.06;
   font-weight: 800;
+}
+
+.job-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .job-company {
@@ -454,15 +463,11 @@ select {
 
 .job-footer {
   margin-top: auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: block;
 }
 
 .job-remove {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  position: static;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -481,11 +486,11 @@ select {
 }
 
 .job-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-width: 210px;
+  width: 100%;
   min-height: 56px;
   border-radius: 999px;
   padding: 0 12px 0 20px;
@@ -496,19 +501,20 @@ select {
 }
 
 .job-link::after {
-  content: "\2192";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  content: "";
+  display: block;
+  flex: 0 0 42px;
   width: 42px;
   height: 42px;
   border-radius: 50%;
   background: var(--pill-black);
-  color: #fff;
-  font-size: 1.22rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M4 12H20M20 12L13 5M20 12L13 19' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 22px 22px;
 }
 
-.badge {
+.job-badge {
   color: rgba(8, 8, 8, 0.8);
   font-size: 0.82rem;
   font-weight: 800;

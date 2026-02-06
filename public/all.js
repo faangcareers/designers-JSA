@@ -39,6 +39,23 @@ function setWarnings(warnings) {
   warningsEl.innerHTML = warnings.map((w) => `<p>${w}</p>`).join("");
 }
 
+function formatBrand(job) {
+  const raw = String(job.company || "").trim();
+  const looksNoisy = raw.length > 40 || raw.includes("|") || raw.includes("?") || raw.includes("Careers");
+  if (raw && !looksNoisy) return raw;
+
+  try {
+    const host = new URL(job.url).hostname.toLowerCase().replace(/^www\./, "");
+    if (host.includes("spotify")) return "Spotify";
+    if (host.includes("revolut")) return "Revolut";
+    if (host.includes("greenhouse")) return "Greenhouse";
+    const label = host.split(".")[0] || host;
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  } catch {
+    return "Unknown company";
+  }
+}
+
 function renderCards(jobs) {
   cardsEl.innerHTML = "";
   if (!jobs || jobs.length === 0) {
@@ -57,12 +74,23 @@ function renderCards(jobs) {
     const header = document.createElement("div");
     header.className = "job-header";
 
+    const controls = document.createElement("div");
+    controls.className = "job-controls";
+
+    if (job.is_new) {
+      const topBadge = document.createElement("span");
+      topBadge.className = "job-badge";
+      topBadge.textContent = "NEW";
+      controls.appendChild(topBadge);
+    }
+
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "icon job-remove";
     removeButton.setAttribute("aria-label", "Remove job");
     removeButton.textContent = "×";
     removeButton.addEventListener("click", () => removeJob(job.id));
+    controls.appendChild(removeButton);
 
     const title = document.createElement("a");
     title.href = job.url;
@@ -72,11 +100,11 @@ function renderCards(jobs) {
     title.className = "job-title";
 
     header.appendChild(title);
-    header.appendChild(removeButton);
+    header.appendChild(controls);
 
     const company = document.createElement("p");
     company.className = "job-company";
-    company.textContent = job.company || "Unknown company";
+    company.textContent = formatBrand(job);
 
     const meta = document.createElement("div");
     meta.className = "job-meta";
@@ -101,16 +129,9 @@ function renderCards(jobs) {
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.className = "job-link";
-    link.textContent = "View on Site \u2192";
+    link.textContent = "View on Site";
 
     footer.appendChild(link);
-
-    if (job.is_new) {
-      const badge = document.createElement("span");
-      badge.className = "badge";
-      badge.textContent = "NEW";
-      footer.appendChild(badge);
-    }
 
     card.appendChild(header);
     card.appendChild(company);
