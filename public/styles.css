@@ -216,6 +216,26 @@ button:hover {
   align-items: center;
 }
 
+.history-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.copy-button {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  background: var(--panel);
+}
+
 .history-list a {
   color: var(--ink);
   text-decoration: none;

@@ -16,6 +16,40 @@ npm run dev
 
 Server defaults to `http://localhost:3000`. To change it, set `PORT` in a `.env` file (see `.env.example`).
 
+## ScrapingBee (optional)
+
+To help with JS-heavy or rate-limited sites, you can enable ScrapingBee:
+
+1. Add your key to `.env`:
+```
+SCRAPINGBEE_API_KEY=your_key_here
+SCRAPINGBEE_RENDER_JS=true
+SCRAPINGBEE_ALWAYS=true
+```
+
+2. Restart the server.
+
+When enabled, the server retries with ScrapingBee if a direct fetch fails. If
+`SCRAPINGBEE_ALWAYS=true`, all HTML fetches go through ScrapingBee.
+
+## Zyte (optional)
+
+Zyte Extract API can also be used to fetch browser-rendered HTML:
+
+1. Add your key to `.env`:
+```
+ZYTE_API_KEY=your_key_here
+ZYTE_ALWAYS=true
+ZYTE_BROWSER_HTML=true
+ZYTE_STRUCTURED_DATA=true
+ZYTE_EXTRACT_TYPE=jobPosting
+```
+
+2. Restart the server.
+
+If `ZYTE_ALWAYS=true`, all HTML fetches go through Zyte. Otherwise Zyte is used
+as a fallback when direct fetch fails.
+
 ## Usage
 
 1. Open the app in your browser.
