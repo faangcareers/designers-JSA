@@ -171,7 +171,17 @@ function renderHistory(items) {
 
     const right = document.createElement("div");
     right.className = "history-actions";
+    const pasteButton = document.createElement("button");
+    pasteButton.type = "button";
+    pasteButton.className = "copy-button";
+    pasteButton.textContent = "Paste";
+    pasteButton.addEventListener("click", () => {
+      urlInput.value = entry.url;
+      urlInput.focus();
+    });
+
     right.appendChild(copyButton);
+    right.appendChild(pasteButton);
     right.appendChild(meta);
 
     li.appendChild(link);
