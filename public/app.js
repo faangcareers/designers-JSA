@@ -103,8 +103,8 @@ function renderCards(jobs) {
     link.href = job.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.className = "text-link";
-    link.textContent = "Open";
+    link.className = "job-link";
+    link.textContent = "View on Site \u2192";
 
     footer.appendChild(link);
 
@@ -343,12 +343,19 @@ function renderSources(sources) {
       loadJobs(source.id);
     });
 
-    const markBtn = document.createElement("button");
-    markBtn.type = "button";
-    markBtn.className = "ghost";
-    markBtn.textContent = "Mark seen";
-    markBtn.addEventListener("click", async () => {
-      await fetch(`/api/sources/${source.id}/mark-seen`, { method: "POST" });
+    const rescanBtn = document.createElement("button");
+    rescanBtn.type = "button";
+    rescanBtn.className = "ghost";
+    rescanBtn.textContent = "Re-scan";
+    rescanBtn.addEventListener("click", async () => {
+      setStatus("Re-scanning source...", "info");
+      const response = await fetch(`/api/sources/${source.id}/refresh`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) {
+        setStatus(payload.error || "Failed to refresh source", "error");
+        return;
+      }
+      clearStatus();
       await loadSources();
       await loadJobs(source.id);
     });
@@ -365,7 +372,7 @@ function renderSources(sources) {
     });
 
     actions.appendChild(viewBtn);
-    actions.appendChild(markBtn);
+    actions.appendChild(rescanBtn);
     actions.appendChild(deleteBtn);
 
     if (source.new_count > 0) {

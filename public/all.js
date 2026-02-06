@@ -100,8 +100,8 @@ function renderCards(jobs) {
     link.href = job.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.className = "text-link";
-    link.textContent = "Open";
+    link.className = "job-link";
+    link.textContent = "View on Site \u2192";
 
     footer.appendChild(link);
 

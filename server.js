@@ -255,6 +255,23 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true });
   }
 
+  if (req.method === "POST" && req.url?.startsWith("/api/sources/") && req.url.endsWith("/refresh")) {
+    const id = Number(req.url.split("/")[3]);
+    if (!Number.isFinite(id)) {
+      return json(res, 400, { error: "Invalid source id" });
+    }
+    const source = await get("SELECT * FROM sources WHERE id = ?", [id]);
+    if (!source) {
+      return json(res, 404, { error: "Source not found" });
+    }
+    try {
+      const result = await refreshSource(source);
+      return json(res, 200, { ok: true, result });
+    } catch (err) {
+      return json(res, 500, { error: err?.message || "Refresh failed" });
+    }
+  }
+
   if (req.method === "DELETE" && req.url?.startsWith("/api/jobs/")) {
     const id = Number(req.url.split("/")[3]);
     if (!Number.isFinite(id)) {

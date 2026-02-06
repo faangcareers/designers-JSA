@@ -9,10 +9,9 @@
   <body>
     <main class="page">
       <header class="page-header">
+        <p class="eyebrow">Inspired by Life at Spotify</p>
         <h1>Designers Job Search Aggregator</h1>
-        <p class="subhead">
-          Aggregate design roles from company sites and boards into a clean, searchable feed.
-        </p>
+        <p class="subhead">Track design roles across sources with a clean Spotify-inspired workflow.</p>
         <div class="header-meta">
           <a class="text-link" href="/all.html">View all jobs</a>
           <label class="theme-switch" for="themeToggle" aria-label="Toggle dark mode">
@@ -21,6 +20,7 @@
             <span class="theme-switch-track" aria-hidden="true"></span>
           </label>
         </div>
+        <div class="hero-accent" aria-hidden="true"></div>
       </header>
 
       <section id="status" class="status hidden"></section>
@@ -28,18 +28,18 @@
 
       <section>
         <div class="card input-card">
-          <label class="label" for="urlInput">Source URL</label>
+          <label class="label" for="urlInput">Job Listings URL</label>
           <div class="input-row">
             <input id="urlInput" type="url" placeholder="https://company.com/careers?team=design" />
-            <button id="parseButton" class="primary" type="button">Add Source</button>
+            <button id="parseButton" class="primary" type="button">Add & Parse</button>
           </div>
-          <p class="hint">We fetch the URL server-side, parse HTML, and store jobs.</p>
+          <p class="hint">Server-side parsing with daily refresh and new-job tracking.</p>
         </div>
 
         <div class="section-head">
           <div>
             <h2>Jobs Feed</h2>
-            <p class="muted">Scan the latest roles from tracked sources.</p>
+            <p class="muted">Latest roles from all tracked sources.</p>
           </div>
           <div class="section-actions">
             <span id="resultsCount" class="count">0 jobs</span>
@@ -60,13 +60,11 @@
         </div>
 
         <div id="cards" class="jobs-grid"></div>
-      </section>
 
-      <section>
         <div class="section-head">
           <div>
             <h2>Sources</h2>
-            <p class="muted">Manage your tracked sources.</p>
+            <p class="muted">Manage tracked pages and refresh status.</p>
           </div>
           <div class="section-actions">
             <button id="toggleSources" class="ghost" type="button">Collapse</button>
@@ -80,7 +78,7 @@
         <div class="section-head">
           <div>
             <h2>History</h2>
-            <p class="muted">Recent URLs added to the tracker.</p>
+            <p class="muted">Recently added listing URLs.</p>
           </div>
           <div class="section-actions">
             <button id="clearHistory" class="ghost" type="button">Clear</button>
