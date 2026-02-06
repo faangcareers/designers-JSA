@@ -7,6 +7,12 @@ const resultsCountEl = document.getElementById("resultsCount");
 const themeToggle = document.getElementById("themeToggle");
 const historyList = document.getElementById("historyList");
 const clearHistoryButton = document.getElementById("clearHistory");
+const sourcesEl = document.getElementById("sources");
+const refreshAllButton = document.getElementById("refreshAll");
+const toggleSourcesButton = document.getElementById("toggleSources");
+const toggleHistoryButton = document.getElementById("toggleHistory");
+const sourcesContentEl = document.getElementById("sourcesContent");
+const historyContentEl = document.getElementById("historyContent");
 
 const THEME_KEY = "djsa-theme";
 const HISTORY_KEY = "djsa-history";
@@ -58,7 +64,7 @@ function renderCards(jobs) {
 
     const company = document.createElement("p");
     company.className = "card-company";
-    company.textContent = job.company || "Unknown company";
+    company.textContent = `Company: ${job.company || "Unknown company"}`;
 
     const meta = document.createElement("div");
     meta.className = "card-meta";
@@ -207,19 +213,19 @@ function addToHistory(url) {
   renderHistory(trimmed);
 }
 
-async function parseJobs() {
+async function addSource() {
   const url = urlInput.value.trim();
   if (!url) {
     setStatus("Please enter a URL.", "error");
     return;
   }
 
-  setStatus("Fetching and parsing jobs...", "info");
+  setStatus("Adding source and parsing jobs...", "info");
   setWarnings([]);
   renderCards([]);
 
   try {
-    const res = await fetch("/api/parse", {
+    const res = await fetch("/api/sources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
@@ -232,17 +238,104 @@ async function parseJobs() {
 
     clearStatus();
     setWarnings(data.warnings);
-    renderCards(data.jobs);
     addToHistory(url);
+    await loadSources();
+    if (data.source?.id) {
+      await loadJobs(data.source.id);
+    }
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
   }
 }
 
-parseButton.addEventListener("click", parseJobs);
+async function loadSources() {
+  const res = await fetch("/api/sources");
+  const data = await res.json();
+  renderSources(data.sources || []);
+}
+
+async function loadJobs(sourceId) {
+  const res = await fetch(`/api/jobs?sourceId=${sourceId}`);
+  const data = await res.json();
+  renderCards(data.jobs || []);
+}
+
+async function refreshAll() {
+  setStatus("Refreshing all sources...", "info");
+  try {
+    const res = await fetch("/api/refresh", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Refresh failed");
+    clearStatus();
+    await loadSources();
+  } catch (err) {
+    setStatus(err.message || "Refresh failed", "error");
+  }
+}
+
+function renderSources(sources) {
+  sourcesEl.innerHTML = "";
+  if (!sources.length) {
+    sourcesEl.innerHTML = "<p class=\"empty\">No sources yet.</p>";
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  sources.forEach((source) => {
+    const card = document.createElement("div");
+    card.className = "source-card";
+
+    const url = document.createElement("div");
+    url.className = "source-url";
+    url.textContent = source.url;
+
+    const meta = document.createElement("div");
+    meta.className = "source-meta";
+    meta.innerHTML = `Last checked: ${source.last_checked_at || "never"} · New: ${source.new_count || 0} · Total: ${source.total_count || 0}`;
+
+    const actions = document.createElement("div");
+    actions.className = "source-actions";
+
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button";
+    viewBtn.textContent = "View jobs";
+    viewBtn.addEventListener("click", () => loadJobs(source.id));
+
+    const markBtn = document.createElement("button");
+    markBtn.type = "button";
+    markBtn.textContent = "Mark seen";
+    markBtn.addEventListener("click", async () => {
+      await fetch(`/api/sources/${source.id}/mark-seen`, { method: "POST" });
+      await loadSources();
+      await loadJobs(source.id);
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Remove";
+    deleteBtn.addEventListener("click", async () => {
+      await fetch(`/api/sources/${source.id}`, { method: "DELETE" });
+      await loadSources();
+      renderCards([]);
+    });
+
+    actions.appendChild(viewBtn);
+    actions.appendChild(markBtn);
+    actions.appendChild(deleteBtn);
+
+    card.appendChild(url);
+    card.appendChild(meta);
+    card.appendChild(actions);
+    fragment.appendChild(card);
+  });
+
+  sourcesEl.appendChild(fragment);
+}
+
+parseButton.addEventListener("click", addSource);
 urlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
-    parseJobs();
+    addSource();
   }
 });
 
@@ -255,8 +348,24 @@ themeToggle.addEventListener("click", () => {
 
 initTheme();
 renderHistory(loadHistory());
+loadSources();
 
 clearHistoryButton.addEventListener("click", () => {
   saveHistory([]);
   renderHistory([]);
+});
+
+refreshAllButton.addEventListener("click", refreshAll);
+
+function toggleSection(contentEl, buttonEl) {
+  const collapsed = contentEl.classList.toggle("hidden");
+  buttonEl.textContent = collapsed ? "Expand" : "Collapse";
+}
+
+toggleSourcesButton.addEventListener("click", () => {
+  toggleSection(sourcesContentEl, toggleSourcesButton);
+});
+
+toggleHistoryButton.addEventListener("click", () => {
+  toggleSection(historyContentEl, toggleHistoryButton);
 });

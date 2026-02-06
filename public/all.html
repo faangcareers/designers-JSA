@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>All Jobs — Designers Job Search Aggregator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div class="hero-top">
+          <p class="eyebrow">Designers Job Search Aggregator</p>
+          <a class="theme-toggle" href="/">Back to sources</a>
+        </div>
+        <h1>All parsed jobs</h1>
+        <p class="subhead">Aggregated across all saved sources.</p>
+      </header>
+
+      <section id="status" class="status hidden"></section>
+      <section id="warnings" class="warnings hidden"></section>
+
+      <section class="results">
+        <div class="results-header">
+          <h2>Jobs</h2>
+          <span id="resultsCount" class="count">0 jobs</span>
+        </div>
+        <div id="cards" class="cards"></div>
+      </section>
+    </main>
+
+    <script src="/all.js" type="module"></script>
+  </body>
+</html>
