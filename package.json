@@ -9,6 +9,9 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
+    ,
+    "sql.js": "^1.10.2"
   }
 }
