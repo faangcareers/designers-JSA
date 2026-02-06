@@ -41,6 +41,8 @@ Zyte Extract API can also be used to fetch browser-rendered HTML:
 ZYTE_API_KEY=your_key_here
 ZYTE_ALWAYS=true
 ZYTE_BROWSER_HTML=true
+ZYTE_STRUCTURED_DATA=true
+ZYTE_EXTRACT_TYPE=jobPosting
 ```
 
 2. Restart the server.

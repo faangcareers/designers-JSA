@@ -23,8 +23,10 @@ const SCRAPINGBEE_ALWAYS = process.env.SCRAPINGBEE_ALWAYS === "true";
 const ZYTE_API_KEY = process.env.ZYTE_API_KEY || "";
 const ZYTE_API_URL = process.env.ZYTE_API_URL || "https://api.zyte.com/v1/extract";
 const ZYTE_BROWSER_HTML = process.env.ZYTE_BROWSER_HTML !== "false";
-const ZYTE_STRUCTURED_DATA = process.env.ZYTE_STRUCTURED_DATA === "true";
+const ZYTE_STRUCTURED_DATA = process.env.ZYTE_STRUCTURED_DATA !== "false";
+const ZYTE_EXTRACT_TYPE = process.env.ZYTE_EXTRACT_TYPE || "jobPosting";
 const ZYTE_ALWAYS = process.env.ZYTE_ALWAYS === "true";
+const ZYTE_DEBUG = process.env.ZYTE_DEBUG === "true";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MAX_BYTES = 1.5 * 1024 * 1024; // 1.5MB
 const FETCH_TIMEOUT_MS = 12000;
@@ -229,40 +231,189 @@ function collectWarnings(html, $) {
   return warnings;
 }
 
+function extractZyteJobs(structuredData, fallbackCompany) {
+  if (!structuredData) return [];
+
+  let normalized = structuredData;
+  if (typeof normalized === "string") {
+    try {
+      normalized = JSON.parse(normalized);
+    } catch {
+      normalized = structuredData;
+    }
+  }
+
+  const jobs = [];
+  const seen = new Set();
+  const queue = Array.isArray(normalized) ? [...normalized] : [normalized];
+
+  const pushJob = (job) => {
+    const title = job.title || job.name || job.jobTitle;
+    const url = job.url || job.applyUrl || job.link;
+    if (!title || !url) return;
+    const key = `${title}::${url}`.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const location =
+      job.location ||
+      job.jobLocation?.raw ||
+      job.jobLocation ||
+      job.location_display ||
+      job.locationName ||
+      job.location?.address?.addressLocality ||
+      job.jobLocation?.address?.addressLocality ||
+      null;
+
+    const company =
+      job.hiringOrganization?.name ||
+      job.company?.name ||
+      job.company ||
+      fallbackCompany ||
+      null;
+
+    jobs.push({
+      title: String(title).trim(),
+      company: company ? String(company).trim() : null,
+      location: location ? String(location).trim() : null,
+      url,
+      postedAt: job.datePosted || job.postedAt || null,
+      tags: null,
+    });
+  };
+
+  while (queue.length) {
+    const node = queue.shift();
+    if (!node) continue;
+    if (Array.isArray(node)) {
+      node.forEach((item) => queue.push(item));
+      continue;
+    }
+    if (typeof node === "object") {
+      if (node.jobPosting || node.job_posting) {
+        queue.push(node.jobPosting || node.job_posting);
+      }
+      if (node.jobPostingNavigation || node.job_posting_navigation) {
+        queue.push(node.jobPostingNavigation || node.job_posting_navigation);
+      }
+      if (node.name === "jobPosting" && node.content) {
+        queue.push(node.content);
+      }
+      if (Array.isArray(node.items)) {
+        queue.push(...node.items);
+      }
+      if (Array.isArray(node.positions)) {
+        queue.push(...node.positions);
+      }
+      if (Array.isArray(node.jobs)) {
+        queue.push(...node.jobs);
+      }
+      if (node.type === "JobPosting" || node["@type"] === "JobPosting") {
+        pushJob(node);
+      } else if (node.title || node.name || node.jobTitle) {
+        pushJob(node);
+      }
+      Object.values(node).forEach((value) => queue.push(value));
+    }
+  }
+
+  return jobs;
+}
+
+function getZyteExtractTypeForUrl(url) {
+  return ZYTE_EXTRACT_TYPE;
+}
+
 async function fetchHtmlWithZyte(url) {
   if (!ZYTE_API_KEY) {
     throw new Error("Zyte API key not configured");
   }
 
-  const payload = {
+  const auth = Buffer.from(`${ZYTE_API_KEY}:`).toString("base64");
+  const extractType = getZyteExtractTypeForUrl(url);
+
+  const basePayload = {
     url,
     browserHtml: ZYTE_BROWSER_HTML,
-    structuredData: ZYTE_STRUCTURED_DATA,
   };
 
-  const auth = Buffer.from(`${ZYTE_API_KEY}:`).toString("base64");
-  const res = await fetch(ZYTE_API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${auth}`,
-      "Content-Type": "application/json",
-      "User-Agent": USER_AGENT,
-      "Accept": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const withExtract = ZYTE_STRUCTURED_DATA
+    ? { ...basePayload, [extractType]: true }
+    : basePayload;
 
-  if (!res.ok) {
-    throw new Error(`Zyte returned ${res.status}`);
+  const request = async (payload) => {
+    const res = await fetch(ZYTE_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const body = await readStreamWithLimit(res.body, MAX_BYTES);
+      const snippet = body.slice(0, 800);
+      throw new Error(`Zyte returned ${res.status}: ${snippet}`);
+    }
+    const body = await readStreamWithLimit(res.body, MAX_BYTES);
+    return JSON.parse(body);
+  };
+
+  let data;
+  try {
+    data = await request(withExtract);
+  } catch (err) {
+    const message = String(err?.message || "");
+    if (
+      message.includes("unrecognized property extract") ||
+      message.includes("unrecognized property structuredData") ||
+      message.includes("unrecognized property jobPosting")
+    ) {
+      data = await request(basePayload);
+    } else {
+      throw err;
+    }
+  }
+  if (ZYTE_DEBUG) {
+    console.log(`Zyte response keys: ${Object.keys(data).join(", ")}`);
+  }
+  const html = data.browserHtml || data.httpResponseBody || "";
+  let structured =
+    data.jobPostingNavigation ||
+    data.job_posting_navigation ||
+    data.jobPosting ||
+    data.job_posting ||
+    data.structuredData ||
+    data.structured_data ||
+    (data.jobTitle && data.url ? data : null);
+
+  if (!structured && data.data && (data.data.jobTitle || data.data.url)) {
+    structured = data.data;
   }
 
-  const body = await readStreamWithLimit(res.body, MAX_BYTES);
-  const data = JSON.parse(body);
-  const html = data.browserHtml || data.httpResponseBody || "";
+  if (!structured && (data.jobTitle || data.url)) {
+    structured = data;
+  }
+
+  if (ZYTE_DEBUG) {
+    console.log(
+      `Zyte structured type: ${
+        Array.isArray(structured) ? "array" : typeof structured
+      }`
+    );
+    try {
+      const preview = JSON.stringify(structured, null, 2).slice(0, 1000);
+      console.log(`Zyte structured preview: ${preview}`);
+    } catch {
+      console.log("Zyte structured preview: [unserializable]");
+    }
+  }
   if (!html) {
     throw new Error("Zyte returned empty HTML");
   }
-  return { html, cookies: "", finalUrl: url };
+  return { html, cookies: "", finalUrl: url, structuredData: structured };
 }
 
 async function fetchJson(url, options = {}) {
@@ -374,6 +525,7 @@ async function handleParse(req, res) {
   let html;
   let cookies = "";
   let finalUrl = parsed.toString();
+  let zyteStructuredJobs = [];
   try {
     if (ZYTE_API_KEY && ZYTE_ALWAYS) {
       console.log(`Using Zyte for: ${parsed.toString()}`);
@@ -381,6 +533,10 @@ async function handleParse(req, res) {
       html = fetched.html;
       cookies = fetched.cookies;
       finalUrl = fetched.finalUrl;
+      zyteStructuredJobs = extractZyteJobs(fetched.structuredData, parsed.hostname);
+      if (ZYTE_DEBUG) {
+        console.log(`Zyte structured jobs: ${zyteStructuredJobs.length}`);
+      }
     } else if (SCRAPINGBEE_API_KEY && SCRAPINGBEE_ALWAYS) {
       console.log(`Using ScrapingBee for: ${parsed.toString()}`);
       const fetched = await fetchHtmlWithScrapingBee(parsed.toString());
@@ -401,6 +557,10 @@ async function handleParse(req, res) {
         html = fetched.html;
         cookies = fetched.cookies;
         finalUrl = fetched.finalUrl;
+        zyteStructuredJobs = extractZyteJobs(fetched.structuredData, parsed.hostname);
+        if (ZYTE_DEBUG) {
+          console.log(`Zyte structured jobs: ${zyteStructuredJobs.length}`);
+        }
       } catch (zyteErr) {
         if (SCRAPINGBEE_API_KEY && !SCRAPINGBEE_ALWAYS) {
           try {
@@ -416,6 +576,8 @@ async function handleParse(req, res) {
           return json(res, 502, { error: zyteErr.message || "Failed to fetch URL" });
         }
       }
+    } else if (ZYTE_API_KEY && ZYTE_ALWAYS) {
+      return json(res, 502, { error: err.message || "Failed to fetch URL" });
     } else if (SCRAPINGBEE_API_KEY && !SCRAPINGBEE_ALWAYS) {
       try {
         console.log(`Direct fetch failed; retrying with ScrapingBee: ${parsed.toString()}`);
@@ -435,6 +597,12 @@ async function handleParse(req, res) {
   const adapter = getAdapter(parsed.hostname);
   const company = getCompanyFromMeta($, parsed.hostname);
   const warnings = collectWarnings(html, $);
+  if (zyteStructuredJobs.length) {
+    zyteStructuredJobs = zyteStructuredJobs.map((job) => ({
+      ...job,
+      company: job.company || company,
+    }));
+  }
 
   let jobs = [];
   let adapterJobs = [];
@@ -451,9 +619,9 @@ async function handleParse(req, res) {
 
   if (adapter.name !== "generic") {
     const genericJobs = parseGeneric($, parsed.toString(), { company });
-    jobs = mergeJobs(adapterJobs, genericJobs);
+    jobs = mergeJobs(mergeJobs(adapterJobs, genericJobs), zyteStructuredJobs);
   } else {
-    jobs = adapterJobs;
+    jobs = mergeJobs(adapterJobs, zyteStructuredJobs);
   }
 
   const response = {
