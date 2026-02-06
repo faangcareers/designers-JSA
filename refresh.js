@@ -1,4 +1,4 @@
-import { all, run } from "./db.js";
+import { all, get, run } from "./db.js";
 import { parseSourceUrl } from "./source-parser.js";
 
 function nowIso() {
@@ -22,6 +22,14 @@ export async function refreshSource(source) {
     let newCount = 0;
     for (const job of jobs) {
       const jobKey = makeJobKey(job);
+      const excluded = await get(
+        "SELECT id FROM job_exclusions WHERE source_id = ? AND job_key = ?",
+        [source.id, jobKey]
+      );
+      if (excluded) {
+        continue;
+      }
+
       await run(
         `INSERT OR IGNORE INTO jobs
          (source_id, job_key, title, company, location, url, first_seen_at, last_seen_at, is_new)

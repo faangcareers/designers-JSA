@@ -57,8 +57,18 @@ async function getDb() {
       error TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS job_exclusions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_id INTEGER NOT NULL,
+      job_key TEXT NOT NULL,
+      job_url TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE(source_id, job_key)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_jobs_source_id ON jobs(source_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_is_new ON jobs(is_new);
+    CREATE INDEX IF NOT EXISTS idx_job_exclusions_source_id ON job_exclusions(source_id);
   `);
 
   dbInstance = db;

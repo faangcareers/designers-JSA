@@ -116,6 +116,14 @@ async function handleAddSource(req, res) {
 
     for (const job of parsed.jobs) {
       const jobKey = makeJobKey(job);
+      const excluded = await get(
+        "SELECT id FROM job_exclusions WHERE source_id = ? AND job_key = ?",
+        [source.id, jobKey]
+      );
+      if (excluded) {
+        continue;
+      }
+
       await run(
         `INSERT OR IGNORE INTO jobs
          (source_id, job_key, title, company, location, url, first_seen_at, last_seen_at, is_new)
@@ -225,12 +233,41 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && req.url?.startsWith("/api/sources/") && req.url.endsWith("/mark-seen")) {
     const id = Number(req.url.split("/")[3]);
+    if (!Number.isFinite(id)) {
+      return json(res, 400, { error: "Invalid source id" });
+    }
     await run("UPDATE jobs SET is_new = 0 WHERE source_id = ?", [id]);
+    return json(res, 200, { ok: true });
+  }
+
+  if (req.method === "DELETE" && req.url?.startsWith("/api/jobs/")) {
+    const id = Number(req.url.split("/")[3]);
+    if (!Number.isFinite(id)) {
+      return json(res, 400, { error: "Invalid job id" });
+    }
+    const job = await get("SELECT id, source_id, job_key, url FROM jobs WHERE id = ?", [id]);
+    if (!job) {
+      return json(res, 404, { error: "Job not found" });
+    }
+    const createdAt = nowIso();
+    await run(
+      `INSERT OR IGNORE INTO job_exclusions
+       (source_id, job_key, job_url, created_at)
+       VALUES (?, ?, ?, ?)`,
+      [job.source_id, job.job_key, job.url, createdAt]
+    );
+    await run("DELETE FROM jobs WHERE id = ?", [id]);
     return json(res, 200, { ok: true });
   }
 
   if (req.method === "DELETE" && req.url?.startsWith("/api/sources/")) {
     const id = Number(req.url.split("/")[3]);
+    if (!Number.isFinite(id)) {
+      return json(res, 400, { error: "Invalid source id" });
+    }
+    await run("DELETE FROM jobs WHERE source_id = ?", [id]);
+    await run("DELETE FROM job_runs WHERE source_id = ?", [id]);
+    await run("DELETE FROM job_exclusions WHERE source_id = ?", [id]);
     await run("DELETE FROM sources WHERE id = ?", [id]);
     return json(res, 200, { ok: true });
   }

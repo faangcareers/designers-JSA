@@ -319,6 +319,11 @@ input[type="url"]:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+}
+
+.job-header {
+  display: block;
 }
 
 .job-title {
@@ -326,6 +331,31 @@ input[type="url"]:focus {
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
+  flex: 1;
+  display: block;
+  padding-right: 40px;
+}
+
+.job-remove {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+}
+
+.job-remove:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .job-title:hover {

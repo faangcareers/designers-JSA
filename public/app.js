@@ -58,12 +58,25 @@ function renderCards(jobs) {
     const card = document.createElement("article");
     card.className = "card job-card";
 
+    const header = document.createElement("div");
+    header.className = "job-header";
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "icon job-remove";
+    removeButton.setAttribute("aria-label", "Remove job");
+    removeButton.textContent = "×";
+    removeButton.addEventListener("click", () => removeJob(job.id));
+
     const title = document.createElement("a");
     title.href = job.url;
     title.target = "_blank";
     title.rel = "noopener noreferrer";
     title.textContent = job.title || "Untitled role";
     title.className = "job-title";
+
+    header.appendChild(title);
+    header.appendChild(removeButton);
 
     const company = document.createElement("p");
     company.className = "job-company";
@@ -103,7 +116,7 @@ function renderCards(jobs) {
       footer.appendChild(badge);
     }
 
-    card.appendChild(title);
+    card.appendChild(header);
     card.appendChild(company);
     if (meta.childNodes.length) card.appendChild(meta);
     card.appendChild(footer);
@@ -229,6 +242,22 @@ function addToHistory(url) {
   const trimmed = items.slice(0, HISTORY_LIMIT);
   saveHistory(trimmed);
   renderHistory(trimmed);
+}
+
+async function removeJob(jobId) {
+  const confirmed = window.confirm("Remove this job from tracking?");
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to remove job");
+    jobsCache = jobsCache.filter((job) => job.id !== jobId);
+    applyJobFilters();
+    await loadSources();
+  } catch (err) {
+    setStatus(err.message || "Failed to remove job", "error");
+  }
 }
 
 async function addSource() {
