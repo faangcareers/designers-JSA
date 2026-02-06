@@ -21,22 +21,12 @@
             <span class="theme-switch-track" aria-hidden="true"></span>
           </label>
         </div>
-        <div class="divider" aria-hidden="true"></div>
       </header>
 
       <section id="status" class="status hidden"></section>
       <section id="warnings" class="warnings hidden"></section>
 
-      <nav class="tabs" role="tablist" aria-label="Primary">
-        <button class="tab is-active" role="tab" aria-selected="true" data-tab="sources">
-          Sources
-        </button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="jobs">
-          Jobs Feed
-        </button>
-      </nav>
-
-      <section class="tab-panel" data-panel="sources" role="tabpanel">
+      <section>
         <div class="card input-card">
           <label class="label" for="urlInput">Source URL</label>
           <div class="input-row">
@@ -46,36 +36,6 @@
           <p class="hint">We fetch the URL server-side, parse HTML, and store jobs.</p>
         </div>
 
-        <div class="section-head">
-          <div>
-            <h2>Sources</h2>
-            <p class="muted">Manage your tracked sources.</p>
-          </div>
-          <div class="section-actions">
-            <button id="refreshAll" class="ghost" type="button">Refresh all</button>
-          </div>
-        </div>
-
-        <div class="sources-wrap">
-          <div id="sources" class="sources-list"></div>
-        </div>
-
-        <div class="section-head">
-          <div>
-            <h2>History</h2>
-            <p class="muted">Recent URLs added to the tracker.</p>
-          </div>
-          <div class="section-actions">
-            <button id="clearHistory" class="ghost" type="button">Clear</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <ul id="historyList" class="history-list"></ul>
-        </div>
-      </section>
-
-      <section class="tab-panel hidden" data-panel="jobs" role="tabpanel">
         <div class="section-head">
           <div>
             <h2>Jobs Feed</h2>
@@ -100,6 +60,36 @@
         </div>
 
         <div id="cards" class="jobs-grid"></div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <div>
+            <h2>Sources</h2>
+            <p class="muted">Manage your tracked sources.</p>
+          </div>
+          <div class="section-actions">
+            <button id="toggleSources" class="ghost" type="button">Collapse</button>
+          </div>
+        </div>
+
+        <div id="sourcesContent" class="sources-wrap">
+          <div id="sources" class="sources-list"></div>
+        </div>
+
+        <div class="section-head">
+          <div>
+            <h2>History</h2>
+            <p class="muted">Recent URLs added to the tracker.</p>
+          </div>
+          <div class="section-actions">
+            <button id="clearHistory" class="ghost" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <ul id="historyList" class="history-list"></ul>
+        </div>
       </section>
     </main>
 

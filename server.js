@@ -53,6 +53,14 @@ function makeJobKey(job) {
   return `${url}::${title}::${company}::${location}`.toLowerCase();
 }
 
+function isSpotifySource(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().includes("lifeatspotify.com");
+  } catch {
+    return false;
+  }
+}
+
 async function serveStatic(req, res) {
   const requestUrl = new URL(req.url, `http://${HOST}:${PORT}`);
   let pathname = requestUrl.pathname || "/";
@@ -110,6 +118,13 @@ async function handleAddSource(req, res) {
       [url, createdAt, "pending"]
     );
     const source = await get("SELECT * FROM sources WHERE url = ?", [url]);
+
+    if (isSpotifySource(source.url)) {
+      await run(
+        "DELETE FROM jobs WHERE source_id = ? AND (url IS NULL OR LOWER(url) NOT LIKE ?)",
+        [source.id, "%lifeatspotify.com/jobs/%"]
+      );
+    }
 
     const parsed = await parseSourceUrl(url);
     let newCount = 0;

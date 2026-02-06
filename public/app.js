@@ -8,9 +8,8 @@ const themeToggle = document.getElementById("themeToggle");
 const historyList = document.getElementById("historyList");
 const clearHistoryButton = document.getElementById("clearHistory");
 const sourcesEl = document.getElementById("sources");
-const refreshAllButton = document.getElementById("refreshAll");
-const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
-const tabPanels = Array.from(document.querySelectorAll("[data-panel]"));
+const toggleSourcesButton = document.getElementById("toggleSources");
+const sourcesContentEl = document.getElementById("sourcesContent");
 const filterNew = document.getElementById("filterNew");
 const filterSource = document.getElementById("filterSource");
 
@@ -289,7 +288,6 @@ async function addSource() {
     await loadSources();
     if (data.source?.id) {
       await loadJobs(data.source.id);
-      setActiveTab("jobs");
     }
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
@@ -312,19 +310,6 @@ async function loadJobs(sourceId) {
   clearStatus();
   jobsCache = data.jobs || [];
   applyJobFilters();
-}
-
-async function refreshAll() {
-  setStatus("Refreshing all sources...", "info");
-  try {
-    const res = await fetch("/api/refresh", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Refresh failed");
-    clearStatus();
-    await loadSources();
-  } catch (err) {
-    setStatus(err.message || "Refresh failed", "error");
-  }
 }
 
 function renderSources(sources) {
@@ -356,7 +341,6 @@ function renderSources(sources) {
     viewBtn.textContent = "View jobs";
     viewBtn.addEventListener("click", () => {
       loadJobs(source.id);
-      setActiveTab("jobs");
     });
 
     const markBtn = document.createElement("button");
@@ -426,25 +410,6 @@ function applyJobFilters() {
   renderCards(filtered);
 }
 
-function setActiveTab(tabId) {
-  tabButtons.forEach((button) => {
-    const isActive = button.dataset.tab === tabId;
-    button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-selected", String(isActive));
-  });
-
-  tabPanels.forEach((panel) => {
-    const isActive = panel.dataset.panel === tabId;
-    panel.classList.toggle("hidden", !isActive);
-  });
-}
-
-function initTabs() {
-  tabButtons.forEach((button) => {
-    button.addEventListener("click", () => setActiveTab(button.dataset.tab));
-  });
-}
-
 parseButton.addEventListener("click", addSource);
 urlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -460,7 +425,6 @@ filterSource.addEventListener("change", () => {
 });
 
 initTheme();
-initTabs();
 renderHistory(loadHistory());
 loadSources();
 
@@ -469,4 +433,7 @@ clearHistoryButton.addEventListener("click", () => {
   renderHistory([]);
 });
 
-refreshAllButton.addEventListener("click", refreshAll);
+toggleSourcesButton.addEventListener("click", () => {
+  const collapsed = sourcesContentEl.classList.toggle("hidden");
+  toggleSourcesButton.textContent = collapsed ? "Expand" : "Collapse";
+});
