@@ -16,6 +16,23 @@ npm run dev
 
 Server defaults to `http://localhost:3000`. To change it, set `PORT` in a `.env` file (see `.env.example`).
 
+## Database
+
+The app uses SQLite for persistence. By default the DB lives at `./data/app.db`.
+You can override with:
+
+```
+DB_PATH=./data/app.db
+```
+
+## Daily refresh
+
+A daily refresh runs at 09:00 local time. Override with:
+
+```
+CRON_HOUR=9
+```
+
 ## ScrapingBee (optional)
 
 To help with JS-heavy or rate-limited sites, you can enable ScrapingBee:

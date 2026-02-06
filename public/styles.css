@@ -191,6 +191,60 @@ button:hover {
   gap: 18px;
 }
 
+.sources {
+  display: grid;
+  gap: 14px;
+}
+
+.source-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-url {
+  word-break: break-all;
+  font-weight: 600;
+}
+
+.source-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-actions button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.badge-new {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ffe1d3;
+  color: #7c3a1c;
+  font-size: 0.75rem;
+}
+
+[data-theme="dark"] .badge-new {
+  background: #3a2620;
+  color: #ffb08f;
+}
+
 .history {
   margin-top: 36px;
 }

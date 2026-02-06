@@ -22,12 +22,12 @@
       </header>
 
       <section class="input-panel">
-        <label for="urlInput">Listings URL</label>
+        <label for="urlInput">Add Source URL</label>
         <div class="input-row">
           <input id="urlInput" type="url" placeholder="https://company.com/careers?team=design" />
-          <button id="parseButton">Parse jobs</button>
+          <button id="parseButton">Add source</button>
         </div>
-        <p class="hint">We fetch the URL server-side and parse the HTML. No secrets exposed.</p>
+        <p class="hint">We fetch the URL server-side, parse HTML, and store jobs.</p>
       </section>
 
       <section id="status" class="status hidden"></section>
@@ -35,7 +35,15 @@
 
       <section class="results">
         <div class="results-header">
-          <h2>Results</h2>
+          <h2>Sources</h2>
+          <button id="refreshAll" class="theme-toggle" type="button">Refresh all</button>
+        </div>
+        <div id="sources" class="sources"></div>
+      </section>
+
+      <section class="results">
+        <div class="results-header">
+          <h2>Jobs</h2>
           <span id="resultsCount" class="count">0 jobs</span>
         </div>
         <div id="cards" class="cards"></div>
