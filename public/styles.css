@@ -57,6 +57,12 @@ body {
   gap: 16px;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .eyebrow {
   font-size: 0.9rem;
   text-transform: uppercase;
