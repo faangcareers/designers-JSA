@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Designers Job Search Aggregator (Cards)</title>
+    <title>Designers Job Search Aggregator</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -12,63 +12,94 @@
         <div class="hero-top">
           <p class="eyebrow">Designers Job Search Aggregator</p>
           <div class="hero-actions">
-            <a class="theme-toggle" href="/all.html">All jobs</a>
-            <button id="themeToggle" class="theme-toggle" type="button">
-              Dark mode
-            </button>
+            <a class="chip" href="/all.html">ALL JOBS</a>
+            <button id="themeToggle" class="chip" type="button">DARK MODE</button>
           </div>
         </div>
-        <h1>Paste a job listings URL. Get clean cards.</h1>
-        <p class="subhead">
-          Best-effort extraction for designer roles across company career pages and job boards.
-        </p>
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="hero-label">DESIGN JOB TRACKER</p>
+            <h1 class="hero-title">
+              <span>INDUSTRIAL</span>
+              <span>EDITION</span>
+            </h1>
+            <p class="subhead">
+              Fast, structured extraction for designer roles across brand sites and job boards.
+              Built for speed, clarity, and daily scanning.
+            </p>
+          </div>
+          <div class="hero-cta">
+            <p class="mono">STATUS: READY / MODE: EDITORIAL</p>
+            <button id="parseButton" class="tag-button" type="button">SCAN SOURCE</button>
+            <p class="hint">Paste a listings URL below to start tracking.</p>
+          </div>
+        </div>
       </header>
 
-      <section class="input-panel">
-        <label for="urlInput">Add Source URL</label>
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">SOURCE INPUT</p>
+            <h2>PASTE SOURCE URL</h2>
+          </div>
+          <div class="panel-actions">
+            <button id="refreshAll" class="chip" type="button">REFRESH ALL</button>
+          </div>
+        </div>
         <div class="input-row">
           <input id="urlInput" type="url" placeholder="https://company.com/careers?team=design" />
-          <button id="parseButton">Add source</button>
+          <button class="tag-button" type="button" id="addSourceAlt">ADD SOURCE</button>
         </div>
-        <p class="hint">We fetch the URL server-side, parse HTML, and store jobs.</p>
       </section>
 
       <section id="status" class="status hidden"></section>
       <section id="warnings" class="warnings hidden"></section>
 
-      <section class="results">
-        <div class="results-header">
-          <h2>Jobs</h2>
-          <span id="resultsCount" class="count">0 jobs</span>
+      <nav class="tab-nav" role="tablist" aria-label="Primary">
+        <button class="tab is-active" role="tab" aria-selected="true" aria-controls="tab-sources" data-tab="sources">
+          SOURCES / INPUT
+        </button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="tab-jobs" data-tab="jobs">
+          JOBS / FEED
+        </button>
+      </nav>
+
+      <section id="tab-sources" class="tab-panel" role="tabpanel" data-panel="sources">
+        <div class="split">
+          <div class="stack">
+            <div class="section-header">
+              <p class="section-label">SAVED SOURCES</p>
+              <div class="section-actions">
+                <button id="toggleSources" class="chip" type="button">COLLAPSE</button>
+              </div>
+            </div>
+            <div id="sourcesContent">
+              <div id="sources" class="sources"></div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="section-header">
+              <p class="section-label">HISTORY</p>
+              <div class="section-actions">
+                <button id="clearHistory" class="chip" type="button">CLEAR</button>
+                <button id="toggleHistory" class="chip" type="button">COLLAPSE</button>
+              </div>
+            </div>
+            <div id="historyContent">
+              <ul id="historyList" class="history-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-jobs" class="tab-panel hidden" role="tabpanel" data-panel="jobs">
+        <div class="section-header">
+          <p class="section-label">JOB FEED</p>
+          <div class="section-actions">
+            <span id="resultsCount" class="count">0 jobs</span>
+          </div>
         </div>
         <div id="cards" class="cards"></div>
-      </section>
-
-      <section class="results">
-        <div class="results-header">
-          <h2>Sources</h2>
-          <div class="hero-actions">
-            <a class="theme-toggle" href="/all.html">All jobs</a>
-            <button id="refreshAll" class="theme-toggle" type="button">Refresh all</button>
-            <button id="toggleSources" class="theme-toggle" type="button">Collapse</button>
-          </div>
-        </div>
-        <div id="sourcesContent">
-          <div id="sources" class="sources"></div>
-        </div>
-      </section>
-
-      <section class="history">
-        <div class="results-header">
-          <h2>History</h2>
-          <div class="hero-actions">
-            <button id="clearHistory" class="theme-toggle" type="button">Clear</button>
-            <button id="toggleHistory" class="theme-toggle" type="button">Collapse</button>
-          </div>
-        </div>
-        <div id="historyContent">
-          <ul id="historyList" class="history-list"></ul>
-        </div>
       </section>
     </main>
 

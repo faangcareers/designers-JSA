@@ -38,21 +38,34 @@ function renderCards(jobs) {
   const fragment = document.createDocumentFragment();
   jobs.forEach((job) => {
     const card = document.createElement("article");
-    card.className = "card";
+    card.className = "job-card";
 
-    const title = document.createElement("a");
-    title.href = job.url;
-    title.target = "_blank";
-    title.rel = "noopener noreferrer";
+    const watermark = document.createElement("div");
+    watermark.className = "watermark";
+    watermark.textContent = "HIRING";
+
+    const header = document.createElement("div");
+    header.className = "job-header";
+
+    const company = document.createElement("span");
+    company.className = "job-tag";
+    company.textContent = (job.company || "Unknown company").toUpperCase();
+
+    header.appendChild(company);
+
+    if (job.is_new) {
+      const badge = document.createElement("span");
+      badge.className = "badge-new";
+      badge.textContent = "NEW";
+      header.appendChild(badge);
+    }
+
+    const title = document.createElement("h3");
+    title.className = "job-title";
     title.textContent = job.title || "Untitled role";
-    title.className = "card-title";
-
-    const company = document.createElement("p");
-    company.className = "card-company";
-    company.textContent = `Company: ${job.company || "Unknown company"}`;
 
     const meta = document.createElement("div");
-    meta.className = "card-meta";
+    meta.className = "job-meta";
 
     if (job.location) {
       const location = document.createElement("span");
@@ -66,16 +79,23 @@ function renderCards(jobs) {
       meta.appendChild(source);
     }
 
-    if (job.is_new) {
-      const badge = document.createElement("span");
-      badge.className = "badge-new";
-      badge.textContent = "NEW";
-      meta.appendChild(badge);
-    }
+    const actions = document.createElement("div");
+    actions.className = "job-actions";
 
+    const open = document.createElement("a");
+    open.href = job.url;
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    open.className = "outline-button";
+    open.textContent = "OPEN LISTING →";
+
+    actions.appendChild(open);
+
+    card.appendChild(watermark);
+    card.appendChild(header);
     card.appendChild(title);
-    card.appendChild(company);
     if (meta.childNodes.length) card.appendChild(meta);
+    card.appendChild(actions);
 
     fragment.appendChild(card);
   });

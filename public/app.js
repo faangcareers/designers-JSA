@@ -1,5 +1,6 @@
 const urlInput = document.getElementById("urlInput");
 const parseButton = document.getElementById("parseButton");
+const addSourceAlt = document.getElementById("addSourceAlt");
 const statusEl = document.getElementById("status");
 const warningsEl = document.getElementById("warnings");
 const cardsEl = document.getElementById("cards");
@@ -13,6 +14,8 @@ const toggleSourcesButton = document.getElementById("toggleSources");
 const toggleHistoryButton = document.getElementById("toggleHistory");
 const sourcesContentEl = document.getElementById("sourcesContent");
 const historyContentEl = document.getElementById("historyContent");
+const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
+const tabPanels = Array.from(document.querySelectorAll("[data-panel]"));
 
 const THEME_KEY = "djsa-theme";
 const HISTORY_KEY = "djsa-history";
@@ -53,21 +56,34 @@ function renderCards(jobs) {
   const fragment = document.createDocumentFragment();
   jobs.forEach((job) => {
     const card = document.createElement("article");
-    card.className = "card";
+    card.className = "job-card";
 
-    const title = document.createElement("a");
-    title.href = job.url;
-    title.target = "_blank";
-    title.rel = "noopener noreferrer";
+    const watermark = document.createElement("div");
+    watermark.className = "watermark";
+    watermark.textContent = "DESIGN";
+
+    const header = document.createElement("div");
+    header.className = "job-header";
+
+    const company = document.createElement("span");
+    company.className = "job-tag";
+    company.textContent = (job.company || "Unknown company").toUpperCase();
+
+    header.appendChild(company);
+
+    if (job.is_new) {
+      const badge = document.createElement("span");
+      badge.className = "badge-new";
+      badge.textContent = "NEW";
+      header.appendChild(badge);
+    }
+
+    const title = document.createElement("h3");
+    title.className = "job-title";
     title.textContent = job.title || "Untitled role";
-    title.className = "card-title";
-
-    const company = document.createElement("p");
-    company.className = "card-company";
-    company.textContent = `Company: ${job.company || "Unknown company"}`;
 
     const meta = document.createElement("div");
-    meta.className = "card-meta";
+    meta.className = "job-meta";
 
     if (job.location) {
       const location = document.createElement("span");
@@ -81,20 +97,23 @@ function renderCards(jobs) {
       meta.appendChild(posted);
     }
 
-    const tags = document.createElement("div");
-    tags.className = "card-tags";
-    if (Array.isArray(job.tags)) {
-      job.tags.forEach((tag) => {
-        const pill = document.createElement("span");
-        pill.textContent = tag;
-        tags.appendChild(pill);
-      });
-    }
+    const actions = document.createElement("div");
+    actions.className = "job-actions";
 
+    const open = document.createElement("a");
+    open.href = job.url;
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    open.className = "outline-button";
+    open.textContent = "OPEN LISTING →";
+
+    actions.appendChild(open);
+
+    card.appendChild(watermark);
+    card.appendChild(header);
     card.appendChild(title);
-    card.appendChild(company);
     if (meta.childNodes.length) card.appendChild(meta);
-    if (tags.childNodes.length) card.appendChild(tags);
+    card.appendChild(actions);
 
     fragment.appendChild(card);
   });
@@ -106,10 +125,10 @@ function applyTheme(theme) {
   const root = document.documentElement;
   if (theme === "dark") {
     root.setAttribute("data-theme", "dark");
-    themeToggle.textContent = "Light mode";
+    themeToggle.textContent = "LIGHT MODE";
   } else {
     root.removeAttribute("data-theme");
-    themeToggle.textContent = "Dark mode";
+    themeToggle.textContent = "DARK MODE";
   }
 }
 
@@ -158,19 +177,19 @@ function renderHistory(items) {
 
     const copyButton = document.createElement("button");
     copyButton.type = "button";
-    copyButton.className = "copy-button";
-    copyButton.textContent = "Copy";
+    copyButton.className = "chip";
+    copyButton.textContent = "COPY";
     copyButton.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(entry.url);
-        copyButton.textContent = "Copied";
+        copyButton.textContent = "COPIED";
         setTimeout(() => {
-          copyButton.textContent = "Copy";
+          copyButton.textContent = "COPY";
         }, 1200);
       } catch {
-        copyButton.textContent = "Failed";
+        copyButton.textContent = "FAILED";
         setTimeout(() => {
-          copyButton.textContent = "Copy";
+          copyButton.textContent = "COPY";
         }, 1200);
       }
     });
@@ -179,8 +198,8 @@ function renderHistory(items) {
     right.className = "history-actions";
     const pasteButton = document.createElement("button");
     pasteButton.type = "button";
-    pasteButton.className = "copy-button";
-    pasteButton.textContent = "Paste";
+    pasteButton.className = "chip";
+    pasteButton.textContent = "PASTE";
     pasteButton.addEventListener("click", () => {
       urlInput.value = entry.url;
       urlInput.focus();
@@ -242,6 +261,7 @@ async function addSource() {
     await loadSources();
     if (data.source?.id) {
       await loadJobs(data.source.id);
+      setActiveTab("jobs");
     }
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
@@ -285,54 +305,103 @@ function renderSources(sources) {
     const card = document.createElement("div");
     card.className = "source-card";
 
+    const head = document.createElement("div");
+    head.className = "source-head";
+
     const url = document.createElement("div");
     url.className = "source-url";
     url.textContent = source.url;
 
-    const meta = document.createElement("div");
-    meta.className = "source-meta";
-    meta.innerHTML = `Last checked: ${source.last_checked_at || "never"} · New: ${source.new_count || 0} · Total: ${source.total_count || 0}`;
-
-    const actions = document.createElement("div");
-    actions.className = "source-actions";
-
-    const viewBtn = document.createElement("button");
-    viewBtn.type = "button";
-    viewBtn.textContent = "View jobs";
-    viewBtn.addEventListener("click", () => loadJobs(source.id));
-
-    const markBtn = document.createElement("button");
-    markBtn.type = "button";
-    markBtn.textContent = "Mark seen";
-    markBtn.addEventListener("click", async () => {
-      await fetch(`/api/sources/${source.id}/mark-seen`, { method: "POST" });
-      await loadSources();
-      await loadJobs(source.id);
-    });
-
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.textContent = "Remove";
+    deleteBtn.className = "icon-button";
+    deleteBtn.setAttribute("aria-label", "Remove source");
+    deleteBtn.textContent = "×";
     deleteBtn.addEventListener("click", async () => {
       await fetch(`/api/sources/${source.id}`, { method: "DELETE" });
       await loadSources();
       renderCards([]);
     });
 
+    head.appendChild(url);
+    head.appendChild(deleteBtn);
+
+    const tags = document.createElement("div");
+    tags.className = "source-tags";
+
+    const lastChecked = document.createElement("span");
+    lastChecked.textContent = `LAST CHECKED: ${source.last_checked_at || "NEVER"}`;
+
+    const newJobs = document.createElement("span");
+    newJobs.textContent = `NEW JOBS: ${source.new_count || 0}`;
+
+    const total = document.createElement("span");
+    total.textContent = `TOTAL: ${source.total_count || 0}`;
+
+    const status = document.createElement("span");
+    status.textContent = source.new_count > 0 ? "STATUS: NEW" : "STATUS: TRACKING";
+
+    tags.appendChild(lastChecked);
+    tags.appendChild(newJobs);
+    tags.appendChild(total);
+    tags.appendChild(status);
+
+    const actions = document.createElement("div");
+    actions.className = "source-actions";
+
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button";
+    viewBtn.className = "chip";
+    viewBtn.textContent = "VIEW JOBS";
+    viewBtn.addEventListener("click", () => {
+      loadJobs(source.id);
+      setActiveTab("jobs");
+    });
+
+    const markBtn = document.createElement("button");
+    markBtn.type = "button";
+    markBtn.className = "chip";
+    markBtn.textContent = "MARK SEEN";
+    markBtn.addEventListener("click", async () => {
+      await fetch(`/api/sources/${source.id}/mark-seen`, { method: "POST" });
+      await loadSources();
+      await loadJobs(source.id);
+    });
+
     actions.appendChild(viewBtn);
     actions.appendChild(markBtn);
-    actions.appendChild(deleteBtn);
 
-    card.appendChild(url);
-    card.appendChild(meta);
+    card.appendChild(head);
+    card.appendChild(tags);
     card.appendChild(actions);
+
     fragment.appendChild(card);
   });
 
   sourcesEl.appendChild(fragment);
 }
 
+function setActiveTab(tabId) {
+  tabButtons.forEach((button) => {
+    const isActive = button.dataset.tab === tabId;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+
+  tabPanels.forEach((panel) => {
+    const isActive = panel.dataset.panel === tabId;
+    panel.classList.toggle("hidden", !isActive);
+  });
+}
+
+function initTabs() {
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+  });
+}
+
 parseButton.addEventListener("click", addSource);
+addSourceAlt.addEventListener("click", addSource);
 urlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     addSource();
@@ -347,6 +416,7 @@ themeToggle.addEventListener("click", () => {
 });
 
 initTheme();
+initTabs();
 renderHistory(loadHistory());
 loadSources();
 
@@ -359,7 +429,7 @@ refreshAllButton.addEventListener("click", refreshAll);
 
 function toggleSection(contentEl, buttonEl) {
   const collapsed = contentEl.classList.toggle("hidden");
-  buttonEl.textContent = collapsed ? "Expand" : "Collapse";
+  buttonEl.textContent = collapsed ? "EXPAND" : "COLLAPSE";
 }
 
 toggleSourcesButton.addEventListener("click", () => {

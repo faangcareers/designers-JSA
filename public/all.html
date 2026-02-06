@@ -11,19 +11,33 @@
       <header class="hero">
         <div class="hero-top">
           <p class="eyebrow">Designers Job Search Aggregator</p>
-          <a class="theme-toggle" href="/">Back to sources</a>
+          <a class="chip" href="/">BACK TO SOURCES</a>
         </div>
-        <h1>All parsed jobs</h1>
-        <p class="subhead">Aggregated across all saved sources.</p>
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="hero-label">ALL SOURCES</p>
+            <h1 class="hero-title">
+              <span>JOB FEED</span>
+              <span>MASTER VIEW</span>
+            </h1>
+            <p class="subhead">Aggregated across every saved source and ordered by freshness.</p>
+          </div>
+          <div class="hero-cta">
+            <p class="mono">STATUS: LIVE / MODE: AGGREGATE</p>
+            <p class="hint">Use this view for quick scanning across all feeds.</p>
+          </div>
+        </div>
       </header>
 
       <section id="status" class="status hidden"></section>
       <section id="warnings" class="warnings hidden"></section>
 
-      <section class="results">
-        <div class="results-header">
-          <h2>Jobs</h2>
-          <span id="resultsCount" class="count">0 jobs</span>
+      <section>
+        <div class="section-header">
+          <p class="section-label">ALL JOBS</p>
+          <div class="section-actions">
+            <span id="resultsCount" class="count">0 jobs</span>
+          </div>
         </div>
         <div id="cards" class="cards"></div>
       </section>
