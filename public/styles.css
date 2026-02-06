@@ -389,7 +389,7 @@ select {
 
 .jobs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -402,6 +402,10 @@ select {
   border-radius: var(--radius-lg);
   box-shadow: none;
   transition: transform 0.18s ease;
+}
+
+.job-card--wide {
+  grid-column: span 2;
 }
 
 .job-card:hover {
@@ -606,7 +610,11 @@ select {
   }
 
   .jobs-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .job-card--wide {
+    grid-column: span 1;
   }
 }
 
@@ -631,6 +639,10 @@ select {
 
   .jobs-grid {
     grid-template-columns: 1fr;
+  }
+
+  .job-card--wide {
+    grid-column: span 1;
   }
 
   .history-list li {

@@ -59,6 +59,13 @@ function formatBrand(job) {
   }
 }
 
+function shouldUseWideCard(title) {
+  const text = String(title || "").trim();
+  if (!text) return false;
+  const words = text.split(/\s+/).filter(Boolean);
+  return text.length >= 52 || words.length >= 8;
+}
+
 function renderCards(jobs) {
   cardsEl.innerHTML = "";
   if (!jobs || jobs.length === 0) {
@@ -73,6 +80,9 @@ function renderCards(jobs) {
   jobs.forEach((job) => {
     const card = document.createElement("article");
     card.className = "card job-card";
+    if (shouldUseWideCard(job.title)) {
+      card.classList.add("job-card--wide");
+    }
 
     const header = document.createElement("div");
     header.className = "job-header";
