@@ -8,38 +8,29 @@
   </head>
   <body>
     <main class="page">
-      <header class="hero">
-        <div class="hero-top">
-          <p class="eyebrow">Designers Job Search Aggregator</p>
-          <a class="chip" href="/">BACK TO SOURCES</a>
+      <header class="page-header">
+        <h1>All Jobs</h1>
+        <p class="subhead">Aggregated across all saved sources.</p>
+        <div class="header-meta">
+          <a class="text-link" href="/index.html">Back to sources</a>
         </div>
-        <div class="hero-grid">
-          <div class="hero-copy">
-            <p class="hero-label">ALL SOURCES</p>
-            <h1 class="hero-title">
-              <span>JOB FEED</span>
-              <span>MASTER VIEW</span>
-            </h1>
-            <p class="subhead">Aggregated across every saved source and ordered by freshness.</p>
-          </div>
-          <div class="hero-cta">
-            <p class="mono">STATUS: LIVE / MODE: AGGREGATE</p>
-            <p class="hint">Use this view for quick scanning across all feeds.</p>
-          </div>
-        </div>
+        <div class="divider" aria-hidden="true"></div>
       </header>
 
       <section id="status" class="status hidden"></section>
       <section id="warnings" class="warnings hidden"></section>
 
       <section>
-        <div class="section-header">
-          <p class="section-label">ALL JOBS</p>
+        <div class="section-head">
+          <div>
+            <h2>Jobs Feed</h2>
+            <p class="muted">All roles across tracked sources.</p>
+          </div>
           <div class="section-actions">
             <span id="resultsCount" class="count">0 jobs</span>
           </div>
         </div>
-        <div id="cards" class="cards"></div>
+        <div id="cards" class="jobs-grid"></div>
       </section>
     </main>
 

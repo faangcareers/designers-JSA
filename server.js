@@ -56,7 +56,7 @@ function makeJobKey(job) {
 async function serveStatic(req, res) {
   const requestUrl = new URL(req.url, `http://${HOST}:${PORT}`);
   let pathname = requestUrl.pathname || "/";
-  if (pathname === "/") pathname = "/index.html";
+  if (pathname === "/") pathname = "/all.html";
   const safePath = pathname.replace(/^\/+/, "");
 
   const filePath = path.join(PUBLIC_DIR, path.normalize(safePath));

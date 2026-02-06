@@ -38,31 +38,18 @@ function renderCards(jobs) {
   const fragment = document.createDocumentFragment();
   jobs.forEach((job) => {
     const card = document.createElement("article");
-    card.className = "job-card";
+    card.className = "card job-card";
 
-    const watermark = document.createElement("div");
-    watermark.className = "watermark";
-    watermark.textContent = "HIRING";
-
-    const header = document.createElement("div");
-    header.className = "job-header";
-
-    const company = document.createElement("span");
-    company.className = "job-tag";
-    company.textContent = (job.company || "Unknown company").toUpperCase();
-
-    header.appendChild(company);
-
-    if (job.is_new) {
-      const badge = document.createElement("span");
-      badge.className = "badge-new";
-      badge.textContent = "NEW";
-      header.appendChild(badge);
-    }
-
-    const title = document.createElement("h3");
-    title.className = "job-title";
+    const title = document.createElement("a");
+    title.href = job.url;
+    title.target = "_blank";
+    title.rel = "noopener noreferrer";
     title.textContent = job.title || "Untitled role";
+    title.className = "job-title";
+
+    const company = document.createElement("p");
+    company.className = "job-company";
+    company.textContent = job.company || "Unknown company";
 
     const meta = document.createElement("div");
     meta.className = "job-meta";
@@ -79,23 +66,29 @@ function renderCards(jobs) {
       meta.appendChild(source);
     }
 
-    const actions = document.createElement("div");
-    actions.className = "job-actions";
+    const footer = document.createElement("div");
+    footer.className = "job-footer";
 
-    const open = document.createElement("a");
-    open.href = job.url;
-    open.target = "_blank";
-    open.rel = "noopener noreferrer";
-    open.className = "outline-button";
-    open.textContent = "OPEN LISTING →";
+    const link = document.createElement("a");
+    link.href = job.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.className = "text-link";
+    link.textContent = "Open";
 
-    actions.appendChild(open);
+    footer.appendChild(link);
 
-    card.appendChild(watermark);
-    card.appendChild(header);
+    if (job.is_new) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "NEW";
+      footer.appendChild(badge);
+    }
+
     card.appendChild(title);
+    card.appendChild(company);
     if (meta.childNodes.length) card.appendChild(meta);
-    card.appendChild(actions);
+    card.appendChild(footer);
 
     fragment.appendChild(card);
   });
