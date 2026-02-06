@@ -632,6 +632,10 @@ async function handleParse(req, res) {
     warnings,
   };
 
+  const filteredJobs = jobs.filter((job) => job.url && job.url !== parsed.toString());
+  response.jobs = filteredJobs;
+  response.count = filteredJobs.length;
+
   return json(res, 200, response);
 }
 
