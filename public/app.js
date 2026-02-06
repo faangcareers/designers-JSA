@@ -9,6 +9,10 @@ const historyList = document.getElementById("historyList");
 const clearHistoryButton = document.getElementById("clearHistory");
 const sourcesEl = document.getElementById("sources");
 const refreshAllButton = document.getElementById("refreshAll");
+const toggleSourcesButton = document.getElementById("toggleSources");
+const toggleHistoryButton = document.getElementById("toggleHistory");
+const sourcesContentEl = document.getElementById("sourcesContent");
+const historyContentEl = document.getElementById("historyContent");
 
 const THEME_KEY = "djsa-theme";
 const HISTORY_KEY = "djsa-history";
@@ -60,7 +64,7 @@ function renderCards(jobs) {
 
     const company = document.createElement("p");
     company.className = "card-company";
-    company.textContent = job.company || "Unknown company";
+    company.textContent = `Company: ${job.company || "Unknown company"}`;
 
     const meta = document.createElement("div");
     meta.className = "card-meta";
@@ -352,3 +356,16 @@ clearHistoryButton.addEventListener("click", () => {
 });
 
 refreshAllButton.addEventListener("click", refreshAll);
+
+function toggleSection(contentEl, buttonEl) {
+  const collapsed = contentEl.classList.toggle("hidden");
+  buttonEl.textContent = collapsed ? "Expand" : "Collapse";
+}
+
+toggleSourcesButton.addEventListener("click", () => {
+  toggleSection(sourcesContentEl, toggleSourcesButton);
+});
+
+toggleHistoryButton.addEventListener("click", () => {
+  toggleSection(historyContentEl, toggleHistoryButton);
+});

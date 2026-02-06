@@ -207,10 +207,18 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url?.startsWith("/api/jobs")) {
     const requestUrl = new URL(req.url, `http://${HOST}:${PORT}`);
     const sourceId = requestUrl.searchParams.get("sourceId");
-    if (!sourceId) return json(res, 400, { error: "Missing sourceId" });
+    if (sourceId) {
+      const jobs = await all(
+        "SELECT * FROM jobs WHERE source_id = ? ORDER BY is_new DESC, first_seen_at DESC",
+        [Number(sourceId)]
+      );
+      return json(res, 200, { jobs });
+    }
     const jobs = await all(
-      "SELECT * FROM jobs WHERE source_id = ? ORDER BY is_new DESC, first_seen_at DESC",
-      [Number(sourceId)]
+      `SELECT j.*, s.url as source_url
+       FROM jobs j
+       JOIN sources s ON s.id = j.source_id
+       ORDER BY j.is_new DESC, j.first_seen_at DESC`
     );
     return json(res, 200, { jobs });
   }

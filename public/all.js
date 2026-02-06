@@ -49,7 +49,7 @@ function renderCards(jobs) {
 
     const company = document.createElement("p");
     company.className = "card-company";
-    company.textContent = job.company || "Unknown company";
+    company.textContent = `Company: ${job.company || "Unknown company"}`;
 
     const meta = document.createElement("div");
     meta.className = "card-meta";
