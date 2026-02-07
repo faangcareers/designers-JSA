@@ -1,6 +1,9 @@
+import path from "node:path";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import initSqlJs from "sql.js";
-import { DB_PATH } from "./stage-config.js";
+import { DB_PATH as CONFIG_DB_PATH } from "./stage-config.js";
+
+const DB_PATH = path.resolve(process.cwd(), CONFIG_DB_PATH);
 
 mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
