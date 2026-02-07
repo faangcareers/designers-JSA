@@ -8,20 +8,14 @@ import cron from "node-cron";
 import { parseSourceUrl } from "./source-parser.js";
 import { all, get, run } from "./db.js";
 import { refreshAllSources, refreshSource } from "./refresh.js";
-import {
-  PORT,
-  HOST,
-  STAGE,
-  CRON_HOUR,
-  CRON_TZ,
-  ENABLE_INTERNAL_CRON,
-  DB_PATH,
-} from "./stage-config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+const HOST = process.env.HOST || "127.0.0.1";
 const PUBLIC_DIR = path.join(__dirname, "public");
+const CRON_HOUR = process.env.CRON_HOUR ? Number(process.env.CRON_HOUR) : 9;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -57,14 +51,6 @@ function makeJobKey(job) {
   const company = job.company || "";
   const location = job.location || "";
   return `${url}::${title}::${company}::${location}`.toLowerCase();
-}
-
-function isSpotifySource(url) {
-  try {
-    return new URL(url).hostname.toLowerCase().includes("lifeatspotify.com");
-  } catch {
-    return false;
-  }
 }
 
 async function serveStatic(req, res) {
@@ -125,26 +111,11 @@ async function handleAddSource(req, res) {
     );
     const source = await get("SELECT * FROM sources WHERE url = ?", [url]);
 
-    if (isSpotifySource(source.url)) {
-      await run(
-        "DELETE FROM jobs WHERE source_id = ? AND (url IS NULL OR LOWER(url) NOT LIKE ?)",
-        [source.id, "%lifeatspotify.com/jobs/%"]
-      );
-    }
-
     const parsed = await parseSourceUrl(url);
     let newCount = 0;
 
     for (const job of parsed.jobs) {
       const jobKey = makeJobKey(job);
-      const excluded = await get(
-        "SELECT id FROM job_exclusions WHERE source_id = ? AND job_key = ?",
-        [source.id, jobKey]
-      );
-      if (excluded) {
-        continue;
-      }
-
       await run(
         `INSERT OR IGNORE INTO jobs
          (source_id, job_key, title, company, location, url, first_seen_at, last_seen_at, is_new)
@@ -210,18 +181,6 @@ async function handleRefreshAll(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
-  if (req.method === "GET" && req.url === "/api/health") {
-    return json(res, 200, {
-      ok: true,
-      stage: STAGE,
-      dbPath: DB_PATH,
-      internalCron: ENABLE_INTERNAL_CRON,
-      cronHour: CRON_HOUR,
-      cronTz: CRON_TZ || "local",
-      now: nowIso(),
-    });
-  }
-
   if (req.method === "POST" && req.url === "/api/parse") {
     return handleParse(req, res);
   }
@@ -266,58 +225,12 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && req.url?.startsWith("/api/sources/") && req.url.endsWith("/mark-seen")) {
     const id = Number(req.url.split("/")[3]);
-    if (!Number.isFinite(id)) {
-      return json(res, 400, { error: "Invalid source id" });
-    }
     await run("UPDATE jobs SET is_new = 0 WHERE source_id = ?", [id]);
-    return json(res, 200, { ok: true });
-  }
-
-  if (req.method === "POST" && req.url?.startsWith("/api/sources/") && req.url.endsWith("/refresh")) {
-    const id = Number(req.url.split("/")[3]);
-    if (!Number.isFinite(id)) {
-      return json(res, 400, { error: "Invalid source id" });
-    }
-    const source = await get("SELECT * FROM sources WHERE id = ?", [id]);
-    if (!source) {
-      return json(res, 404, { error: "Source not found" });
-    }
-    try {
-      const result = await refreshSource(source);
-      return json(res, 200, { ok: true, result });
-    } catch (err) {
-      return json(res, 500, { error: err?.message || "Refresh failed" });
-    }
-  }
-
-  if (req.method === "DELETE" && req.url?.startsWith("/api/jobs/")) {
-    const id = Number(req.url.split("/")[3]);
-    if (!Number.isFinite(id)) {
-      return json(res, 400, { error: "Invalid job id" });
-    }
-    const job = await get("SELECT id, source_id, job_key, url FROM jobs WHERE id = ?", [id]);
-    if (!job) {
-      return json(res, 404, { error: "Job not found" });
-    }
-    const createdAt = nowIso();
-    await run(
-      `INSERT OR IGNORE INTO job_exclusions
-       (source_id, job_key, job_url, created_at)
-       VALUES (?, ?, ?, ?)`,
-      [job.source_id, job.job_key, job.url, createdAt]
-    );
-    await run("DELETE FROM jobs WHERE id = ?", [id]);
     return json(res, 200, { ok: true });
   }
 
   if (req.method === "DELETE" && req.url?.startsWith("/api/sources/")) {
     const id = Number(req.url.split("/")[3]);
-    if (!Number.isFinite(id)) {
-      return json(res, 400, { error: "Invalid source id" });
-    }
-    await run("DELETE FROM jobs WHERE source_id = ?", [id]);
-    await run("DELETE FROM job_runs WHERE source_id = ?", [id]);
-    await run("DELETE FROM job_exclusions WHERE source_id = ?", [id]);
     await run("DELETE FROM sources WHERE id = ?", [id]);
     return json(res, 200, { ok: true });
   }
@@ -331,20 +244,17 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT} (stage=${STAGE})`);
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
 
-if (ENABLE_INTERNAL_CRON) {
-  const cronOptions = CRON_TZ ? { timezone: CRON_TZ } : undefined;
-  cron.schedule(`0 ${CRON_HOUR} * * *`, async () => {
-    if (refreshInFlight) return;
-    refreshInFlight = true;
-    try {
-      await refreshAllSources();
-    } catch (err) {
-      console.error("Scheduled refresh failed", err);
-    } finally {
-      refreshInFlight = false;
-    }
-  }, cronOptions);
-}
+cron.schedule(`0 ${CRON_HOUR} * * *`, async () => {
+  if (refreshInFlight) return;
+  refreshInFlight = true;
+  try {
+    await refreshAllSources();
+  } catch (err) {
+    console.error("Scheduled refresh failed", err);
+  } finally {
+    refreshInFlight = false;
+  }
+});

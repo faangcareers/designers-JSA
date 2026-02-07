@@ -4,6 +4,19 @@ const statusEl = document.getElementById("status");
 const warningsEl = document.getElementById("warnings");
 const cardsEl = document.getElementById("cards");
 const resultsCountEl = document.getElementById("resultsCount");
+const themeToggle = document.getElementById("themeToggle");
+const historyList = document.getElementById("historyList");
+const clearHistoryButton = document.getElementById("clearHistory");
+const sourcesEl = document.getElementById("sources");
+const refreshAllButton = document.getElementById("refreshAll");
+const toggleSourcesButton = document.getElementById("toggleSources");
+const toggleHistoryButton = document.getElementById("toggleHistory");
+const sourcesContentEl = document.getElementById("sourcesContent");
+const historyContentEl = document.getElementById("historyContent");
+
+const THEME_KEY = "djsa-theme";
+const HISTORY_KEY = "djsa-history";
+const HISTORY_LIMIT = 20;
 
 function setStatus(message, type = "info") {
   statusEl.textContent = message;
@@ -51,7 +64,7 @@ function renderCards(jobs) {
 
     const company = document.createElement("p");
     company.className = "card-company";
-    company.textContent = job.company || "Unknown company";
+    company.textContent = `Company: ${job.company || "Unknown company"}`;
 
     const meta = document.createElement("div");
     meta.className = "card-meta";
@@ -89,19 +102,129 @@ function renderCards(jobs) {
   cardsEl.appendChild(fragment);
 }
 
-async function parseJobs() {
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "dark") {
+    root.setAttribute("data-theme", "dark");
+    themeToggle.textContent = "Light mode";
+  } else {
+    root.removeAttribute("data-theme");
+    themeToggle.textContent = "Dark mode";
+  }
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved) {
+    applyTheme(saved);
+    return;
+  }
+
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(prefersDark ? "dark" : "light");
+}
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(items) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+}
+
+function renderHistory(items) {
+  historyList.innerHTML = "";
+  if (!items.length) {
+    historyList.innerHTML = "<li class=\"empty\">No history yet.</li>";
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  items.forEach((entry) => {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = entry.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = entry.url;
+
+    const meta = document.createElement("span");
+    meta.className = "history-meta";
+    meta.textContent = entry.date;
+
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "copy-button";
+    copyButton.textContent = "Copy";
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(entry.url);
+        copyButton.textContent = "Copied";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1200);
+      } catch {
+        copyButton.textContent = "Failed";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1200);
+      }
+    });
+
+    const right = document.createElement("div");
+    right.className = "history-actions";
+    const pasteButton = document.createElement("button");
+    pasteButton.type = "button";
+    pasteButton.className = "copy-button";
+    pasteButton.textContent = "Paste";
+    pasteButton.addEventListener("click", () => {
+      urlInput.value = entry.url;
+      urlInput.focus();
+    });
+
+    right.appendChild(copyButton);
+    right.appendChild(pasteButton);
+    right.appendChild(meta);
+
+    li.appendChild(link);
+    li.appendChild(right);
+    fragment.appendChild(li);
+  });
+
+  historyList.appendChild(fragment);
+}
+
+function addToHistory(url) {
+  const items = loadHistory();
+  const existingIndex = items.findIndex((item) => item.url === url);
+  if (existingIndex >= 0) {
+    items.splice(existingIndex, 1);
+  }
+  items.unshift({
+    url,
+    date: new Date().toLocaleString(),
+  });
+  const trimmed = items.slice(0, HISTORY_LIMIT);
+  saveHistory(trimmed);
+  renderHistory(trimmed);
+}
+
+async function addSource() {
   const url = urlInput.value.trim();
   if (!url) {
     setStatus("Please enter a URL.", "error");
     return;
   }
 
-  setStatus("Fetching and parsing jobs...", "info");
+  setStatus("Adding source and parsing jobs...", "info");
   setWarnings([]);
   renderCards([]);
 
   try {
-    // Prefer full pipeline with DB tracking/new-job logic.
     const res = await fetch("/api/sources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -109,39 +232,140 @@ async function parseJobs() {
     });
 
     const data = await res.json();
-    if (res.ok && data?.source?.id) {
-      const jobsRes = await fetch(`/api/jobs?sourceId=${encodeURIComponent(data.source.id)}`);
-      const jobsData = await jobsRes.json();
-      if (!jobsRes.ok) {
-        throw new Error(jobsData.error || "Failed to load parsed jobs");
-      }
-      clearStatus();
-      setWarnings(data.warnings);
-      renderCards(jobsData.jobs || []);
-      return;
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to parse jobs");
     }
 
-    // Fallback for environments where only /api/parse is available.
-    const parseRes = await fetch("/api/parse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    const parseData = await parseRes.json();
-    if (!parseRes.ok) {
-      throw new Error(data.error || parseData.error || "Failed to parse jobs");
-    }
     clearStatus();
-    setWarnings(parseData.warnings);
-    renderCards(parseData.jobs || []);
+    setWarnings(data.warnings);
+    addToHistory(url);
+    await loadSources();
+    if (data.source?.id) {
+      await loadJobs(data.source.id);
+    }
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
   }
 }
 
-parseButton.addEventListener("click", parseJobs);
+async function loadSources() {
+  const res = await fetch("/api/sources");
+  const data = await res.json();
+  renderSources(data.sources || []);
+}
+
+async function loadJobs(sourceId) {
+  const res = await fetch(`/api/jobs?sourceId=${sourceId}`);
+  const data = await res.json();
+  renderCards(data.jobs || []);
+}
+
+async function refreshAll() {
+  setStatus("Refreshing all sources...", "info");
+  try {
+    const res = await fetch("/api/refresh", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Refresh failed");
+    clearStatus();
+    await loadSources();
+  } catch (err) {
+    setStatus(err.message || "Refresh failed", "error");
+  }
+}
+
+function renderSources(sources) {
+  sourcesEl.innerHTML = "";
+  if (!sources.length) {
+    sourcesEl.innerHTML = "<p class=\"empty\">No sources yet.</p>";
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  sources.forEach((source) => {
+    const card = document.createElement("div");
+    card.className = "source-card";
+
+    const url = document.createElement("div");
+    url.className = "source-url";
+    url.textContent = source.url;
+
+    const meta = document.createElement("div");
+    meta.className = "source-meta";
+    meta.innerHTML = `Last checked: ${source.last_checked_at || "never"} · New: ${source.new_count || 0} · Total: ${source.total_count || 0}`;
+
+    const actions = document.createElement("div");
+    actions.className = "source-actions";
+
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button";
+    viewBtn.textContent = "View jobs";
+    viewBtn.addEventListener("click", () => loadJobs(source.id));
+
+    const markBtn = document.createElement("button");
+    markBtn.type = "button";
+    markBtn.textContent = "Mark seen";
+    markBtn.addEventListener("click", async () => {
+      await fetch(`/api/sources/${source.id}/mark-seen`, { method: "POST" });
+      await loadSources();
+      await loadJobs(source.id);
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Remove";
+    deleteBtn.addEventListener("click", async () => {
+      await fetch(`/api/sources/${source.id}`, { method: "DELETE" });
+      await loadSources();
+      renderCards([]);
+    });
+
+    actions.appendChild(viewBtn);
+    actions.appendChild(markBtn);
+    actions.appendChild(deleteBtn);
+
+    card.appendChild(url);
+    card.appendChild(meta);
+    card.appendChild(actions);
+    fragment.appendChild(card);
+  });
+
+  sourcesEl.appendChild(fragment);
+}
+
+parseButton.addEventListener("click", addSource);
 urlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
-    parseJobs();
+    addSource();
   }
+});
+
+themeToggle.addEventListener("click", () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
+initTheme();
+renderHistory(loadHistory());
+loadSources();
+
+clearHistoryButton.addEventListener("click", () => {
+  saveHistory([]);
+  renderHistory([]);
+});
+
+refreshAllButton.addEventListener("click", refreshAll);
+
+function toggleSection(contentEl, buttonEl) {
+  const collapsed = contentEl.classList.toggle("hidden");
+  buttonEl.textContent = collapsed ? "Expand" : "Collapse";
+}
+
+toggleSourcesButton.addEventListener("click", () => {
+  toggleSection(sourcesContentEl, toggleSourcesButton);
+});
+
+toggleHistoryButton.addEventListener("click", () => {
+  toggleSection(historyContentEl, toggleHistoryButton);
 });

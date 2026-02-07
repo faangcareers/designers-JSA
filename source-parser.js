@@ -11,18 +11,6 @@ import {
   mergeJobs,
 } from "./source-utils.js";
 
-function isLifeAtSpotifyJobUrl(url) {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    const path = parsed.pathname.toLowerCase();
-    return host.includes("lifeatspotify.com") && path.includes("/jobs/");
-  } catch {
-    return false;
-  }
-}
-
 export async function parseSourceUrl(sourceUrl) {
   let parsed;
   try {
@@ -63,10 +51,7 @@ export async function parseSourceUrl(sourceUrl) {
     jobs = mergeJobs(adapterJobs, fetched.zyteStructuredJobs);
   }
 
-  let filteredJobs = jobs.filter((job) => job.url && job.url !== parsed.toString());
-  if (parsed.hostname.toLowerCase().includes("lifeatspotify.com")) {
-    filteredJobs = filteredJobs.filter((job) => isLifeAtSpotifyJobUrl(job.url));
-  }
+  const filteredJobs = jobs.filter((job) => job.url && job.url !== parsed.toString());
 
   return {
     sourceUrl: parsed.toString(),

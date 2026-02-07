@@ -1,4 +1,4 @@
-import { all, get, run } from "./db.js";
+import { all, run } from "./db.js";
 import { parseSourceUrl } from "./source-parser.js";
 
 function nowIso() {
@@ -13,38 +13,15 @@ function makeJobKey(job) {
   return `${url}::${title}::${company}::${location}`.toLowerCase();
 }
 
-function isSpotifySource(url) {
-  try {
-    return new URL(url).hostname.toLowerCase().includes("lifeatspotify.com");
-  } catch {
-    return false;
-  }
-}
-
 export async function refreshSource(source) {
   const ranAt = nowIso();
   try {
-    if (isSpotifySource(source.url)) {
-      await run(
-        "DELETE FROM jobs WHERE source_id = ? AND (url IS NULL OR LOWER(url) NOT LIKE ?)",
-        [source.id, "%lifeatspotify.com/jobs/%"]
-      );
-    }
-
     const parsed = await parseSourceUrl(source.url);
     const jobs = parsed.jobs || [];
 
     let newCount = 0;
     for (const job of jobs) {
       const jobKey = makeJobKey(job);
-      const excluded = await get(
-        "SELECT id FROM job_exclusions WHERE source_id = ? AND job_key = ?",
-        [source.id, jobKey]
-      );
-      if (excluded) {
-        continue;
-      }
-
       await run(
         `INSERT OR IGNORE INTO jobs
          (source_id, job_key, title, company, location, url, first_seen_at, last_seen_at, is_new)
