@@ -8,8 +8,9 @@ const themeToggle = document.getElementById("themeToggle");
 const historyList = document.getElementById("historyList");
 const clearHistoryButton = document.getElementById("clearHistory");
 const sourcesEl = document.getElementById("sources");
-const toggleSourcesButton = document.getElementById("toggleSources");
-const sourcesContentEl = document.getElementById("sourcesContent");
+const refreshAllButton = document.getElementById("refreshAll");
+const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
+const tabPanels = Array.from(document.querySelectorAll("[data-panel]"));
 const filterNew = document.getElementById("filterNew");
 const filterSource = document.getElementById("filterSource");
 
@@ -42,30 +43,6 @@ function setWarnings(warnings) {
   warningsEl.innerHTML = warnings.map((w) => `<p>${w}</p>`).join("");
 }
 
-function formatBrand(job) {
-  const raw = String(job.company || "").trim();
-  const looksNoisy = raw.length > 40 || raw.includes("|") || raw.includes("?") || raw.includes("Careers");
-  if (raw && !looksNoisy) return raw;
-
-  try {
-    const host = new URL(job.url).hostname.toLowerCase().replace(/^www\./, "");
-    if (host.includes("spotify")) return "Spotify";
-    if (host.includes("revolut")) return "Revolut";
-    if (host.includes("greenhouse")) return "Greenhouse";
-    const label = host.split(".")[0] || host;
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  } catch {
-    return "Unknown company";
-  }
-}
-
-function shouldUseWideCard(title) {
-  const text = String(title || "").trim();
-  if (!text) return false;
-  const words = text.split(/\s+/).filter(Boolean);
-  return text.length >= 52 || words.length >= 8;
-}
-
 function renderCards(jobs) {
   cardsEl.innerHTML = "";
   if (!jobs || jobs.length === 0) {
@@ -80,22 +57,9 @@ function renderCards(jobs) {
   jobs.forEach((job) => {
     const card = document.createElement("article");
     card.className = "card job-card";
-    if (shouldUseWideCard(job.title)) {
-      card.classList.add("job-card--wide");
-    }
 
     const header = document.createElement("div");
     header.className = "job-header";
-
-    const controls = document.createElement("div");
-    controls.className = "job-controls";
-
-    if (job.is_new) {
-      const topBadge = document.createElement("span");
-      topBadge.className = "job-badge";
-      topBadge.textContent = "NEW";
-      controls.appendChild(topBadge);
-    }
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
@@ -103,7 +67,6 @@ function renderCards(jobs) {
     removeButton.setAttribute("aria-label", "Remove job");
     removeButton.textContent = "×";
     removeButton.addEventListener("click", () => removeJob(job.id));
-    controls.appendChild(removeButton);
 
     const title = document.createElement("a");
     title.href = job.url;
@@ -113,11 +76,11 @@ function renderCards(jobs) {
     title.className = "job-title";
 
     header.appendChild(title);
-    header.appendChild(controls);
+    header.appendChild(removeButton);
 
     const company = document.createElement("p");
     company.className = "job-company";
-    company.textContent = formatBrand(job);
+    company.textContent = job.company || "Unknown company";
 
     const meta = document.createElement("div");
     meta.className = "job-meta";
@@ -141,10 +104,17 @@ function renderCards(jobs) {
     link.href = job.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.className = "job-link";
-    link.textContent = "View on Site";
+    link.className = "text-link";
+    link.textContent = "Open";
 
     footer.appendChild(link);
+
+    if (job.is_new) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "NEW";
+      footer.appendChild(badge);
+    }
 
     card.appendChild(header);
     card.appendChild(company);
@@ -319,6 +289,7 @@ async function addSource() {
     await loadSources();
     if (data.source?.id) {
       await loadJobs(data.source.id);
+      setActiveTab("jobs");
     }
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
@@ -341,6 +312,19 @@ async function loadJobs(sourceId) {
   clearStatus();
   jobsCache = data.jobs || [];
   applyJobFilters();
+}
+
+async function refreshAll() {
+  setStatus("Refreshing all sources...", "info");
+  try {
+    const res = await fetch("/api/refresh", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Refresh failed");
+    clearStatus();
+    await loadSources();
+  } catch (err) {
+    setStatus(err.message || "Refresh failed", "error");
+  }
 }
 
 function renderSources(sources) {
@@ -372,21 +356,15 @@ function renderSources(sources) {
     viewBtn.textContent = "View jobs";
     viewBtn.addEventListener("click", () => {
       loadJobs(source.id);
+      setActiveTab("jobs");
     });
 
-    const rescanBtn = document.createElement("button");
-    rescanBtn.type = "button";
-    rescanBtn.className = "ghost";
-    rescanBtn.textContent = "Re-scan";
-    rescanBtn.addEventListener("click", async () => {
-      setStatus("Re-scanning source...", "info");
-      const response = await fetch(`/api/sources/${source.id}/refresh`, { method: "POST" });
-      const payload = await response.json();
-      if (!response.ok) {
-        setStatus(payload.error || "Failed to refresh source", "error");
-        return;
-      }
-      clearStatus();
+    const markBtn = document.createElement("button");
+    markBtn.type = "button";
+    markBtn.className = "ghost";
+    markBtn.textContent = "Mark seen";
+    markBtn.addEventListener("click", async () => {
+      await fetch(`/api/sources/${source.id}/mark-seen`, { method: "POST" });
       await loadSources();
       await loadJobs(source.id);
     });
@@ -403,7 +381,7 @@ function renderSources(sources) {
     });
 
     actions.appendChild(viewBtn);
-    actions.appendChild(rescanBtn);
+    actions.appendChild(markBtn);
     actions.appendChild(deleteBtn);
 
     if (source.new_count > 0) {
@@ -448,6 +426,25 @@ function applyJobFilters() {
   renderCards(filtered);
 }
 
+function setActiveTab(tabId) {
+  tabButtons.forEach((button) => {
+    const isActive = button.dataset.tab === tabId;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+
+  tabPanels.forEach((panel) => {
+    const isActive = panel.dataset.panel === tabId;
+    panel.classList.toggle("hidden", !isActive);
+  });
+}
+
+function initTabs() {
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+  });
+}
+
 parseButton.addEventListener("click", addSource);
 urlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -463,6 +460,7 @@ filterSource.addEventListener("change", () => {
 });
 
 initTheme();
+initTabs();
 renderHistory(loadHistory());
 loadSources();
 
@@ -471,7 +469,4 @@ clearHistoryButton.addEventListener("click", () => {
   renderHistory([]);
 });
 
-toggleSourcesButton.addEventListener("click", () => {
-  const collapsed = sourcesContentEl.classList.toggle("hidden");
-  toggleSourcesButton.textContent = collapsed ? "Expand" : "Collapse";
-});
+refreshAllButton.addEventListener("click", refreshAll);

@@ -39,30 +39,6 @@ function setWarnings(warnings) {
   warningsEl.innerHTML = warnings.map((w) => `<p>${w}</p>`).join("");
 }
 
-function formatBrand(job) {
-  const raw = String(job.company || "").trim();
-  const looksNoisy = raw.length > 40 || raw.includes("|") || raw.includes("?") || raw.includes("Careers");
-  if (raw && !looksNoisy) return raw;
-
-  try {
-    const host = new URL(job.url).hostname.toLowerCase().replace(/^www\./, "");
-    if (host.includes("spotify")) return "Spotify";
-    if (host.includes("revolut")) return "Revolut";
-    if (host.includes("greenhouse")) return "Greenhouse";
-    const label = host.split(".")[0] || host;
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  } catch {
-    return "Unknown company";
-  }
-}
-
-function shouldUseWideCard(title) {
-  const text = String(title || "").trim();
-  if (!text) return false;
-  const words = text.split(/\s+/).filter(Boolean);
-  return text.length >= 52 || words.length >= 8;
-}
-
 function renderCards(jobs) {
   cardsEl.innerHTML = "";
   if (!jobs || jobs.length === 0) {
@@ -77,22 +53,9 @@ function renderCards(jobs) {
   jobs.forEach((job) => {
     const card = document.createElement("article");
     card.className = "card job-card";
-    if (shouldUseWideCard(job.title)) {
-      card.classList.add("job-card--wide");
-    }
 
     const header = document.createElement("div");
     header.className = "job-header";
-
-    const controls = document.createElement("div");
-    controls.className = "job-controls";
-
-    if (job.is_new) {
-      const topBadge = document.createElement("span");
-      topBadge.className = "job-badge";
-      topBadge.textContent = "NEW";
-      controls.appendChild(topBadge);
-    }
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
@@ -100,7 +63,6 @@ function renderCards(jobs) {
     removeButton.setAttribute("aria-label", "Remove job");
     removeButton.textContent = "×";
     removeButton.addEventListener("click", () => removeJob(job.id));
-    controls.appendChild(removeButton);
 
     const title = document.createElement("a");
     title.href = job.url;
@@ -110,11 +72,11 @@ function renderCards(jobs) {
     title.className = "job-title";
 
     header.appendChild(title);
-    header.appendChild(controls);
+    header.appendChild(removeButton);
 
     const company = document.createElement("p");
     company.className = "job-company";
-    company.textContent = formatBrand(job);
+    company.textContent = job.company || "Unknown company";
 
     const meta = document.createElement("div");
     meta.className = "job-meta";
@@ -138,10 +100,17 @@ function renderCards(jobs) {
     link.href = job.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.className = "job-link";
-    link.textContent = "View on Site";
+    link.className = "text-link";
+    link.textContent = "Open";
 
     footer.appendChild(link);
+
+    if (job.is_new) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "NEW";
+      footer.appendChild(badge);
+    }
 
     card.appendChild(header);
     card.appendChild(company);
