@@ -101,20 +101,39 @@ async function parseJobs() {
   renderCards([]);
 
   try {
-    const res = await fetch("/api/parse", {
+    // Prefer full pipeline with DB tracking/new-job logic.
+    const res = await fetch("/api/sources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to parse jobs");
+    if (res.ok && data?.source?.id) {
+      const jobsRes = await fetch(`/api/jobs?sourceId=${encodeURIComponent(data.source.id)}`);
+      const jobsData = await jobsRes.json();
+      if (!jobsRes.ok) {
+        throw new Error(jobsData.error || "Failed to load parsed jobs");
+      }
+      clearStatus();
+      setWarnings(data.warnings);
+      renderCards(jobsData.jobs || []);
+      return;
     }
 
+    // Fallback for environments where only /api/parse is available.
+    const parseRes = await fetch("/api/parse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const parseData = await parseRes.json();
+    if (!parseRes.ok) {
+      throw new Error(data.error || parseData.error || "Failed to parse jobs");
+    }
     clearStatus();
-    setWarnings(data.warnings);
-    renderCards(data.jobs);
+    setWarnings(parseData.warnings);
+    renderCards(parseData.jobs || []);
   } catch (err) {
     setStatus(err.message || "Something went wrong.", "error");
   }
