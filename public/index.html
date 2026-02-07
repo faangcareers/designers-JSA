@@ -3,103 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Designers Job Search Aggregator</title>
+    <title>Designers Job Search Aggregator (Cards)</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main class="page">
-      <header class="page-header">
-        <h1>Designers Job Search Aggregator</h1>
+      <header class="hero">
+        <p class="eyebrow">Designers Job Search Aggregator</p>
+        <h1>Paste a job listings URL. Get clean cards.</h1>
         <p class="subhead">
-          Aggregate design roles from company sites and boards into a clean, searchable feed.
+          Best-effort extraction for designer roles across company career pages and job boards.
         </p>
-        <div class="header-meta">
-          <a class="text-link" href="/all.html">View all jobs</a>
-          <label class="theme-switch" for="themeToggle" aria-label="Toggle dark mode">
-            <span class="theme-switch-text">Theme</span>
-            <input id="themeToggle" type="checkbox" role="switch" aria-label="Dark mode" />
-            <span class="theme-switch-track" aria-hidden="true"></span>
-          </label>
-        </div>
-        <div class="divider" aria-hidden="true"></div>
       </header>
+
+      <section class="input-panel">
+        <label for="urlInput">Listings URL</label>
+        <div class="input-row">
+          <input id="urlInput" type="url" placeholder="https://company.com/careers?team=design" />
+          <button id="parseButton">Parse jobs</button>
+        </div>
+        <p class="hint">We fetch the URL server-side and parse the HTML. No secrets exposed.</p>
+      </section>
 
       <section id="status" class="status hidden"></section>
       <section id="warnings" class="warnings hidden"></section>
 
-      <nav class="tabs" role="tablist" aria-label="Primary">
-        <button class="tab is-active" role="tab" aria-selected="true" data-tab="sources">
-          Sources
-        </button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="jobs">
-          Jobs Feed
-        </button>
-      </nav>
-
-      <section class="tab-panel" data-panel="sources" role="tabpanel">
-        <div class="card input-card">
-          <label class="label" for="urlInput">Source URL</label>
-          <div class="input-row">
-            <input id="urlInput" type="url" placeholder="https://company.com/careers?team=design" />
-            <button id="parseButton" class="primary" type="button">Add Source</button>
-          </div>
-          <p class="hint">We fetch the URL server-side, parse HTML, and store jobs.</p>
+      <section class="results">
+        <div class="results-header">
+          <h2>Results</h2>
+          <span id="resultsCount" class="count">0 jobs</span>
         </div>
-
-        <div class="section-head">
-          <div>
-            <h2>Sources</h2>
-            <p class="muted">Manage your tracked sources.</p>
-          </div>
-          <div class="section-actions">
-            <button id="refreshAll" class="ghost" type="button">Refresh all</button>
-          </div>
-        </div>
-
-        <div class="sources-wrap">
-          <div id="sources" class="sources-list"></div>
-        </div>
-
-        <div class="section-head">
-          <div>
-            <h2>History</h2>
-            <p class="muted">Recent URLs added to the tracker.</p>
-          </div>
-          <div class="section-actions">
-            <button id="clearHistory" class="ghost" type="button">Clear</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <ul id="historyList" class="history-list"></ul>
-        </div>
-      </section>
-
-      <section class="tab-panel hidden" data-panel="jobs" role="tabpanel">
-        <div class="section-head">
-          <div>
-            <h2>Jobs Feed</h2>
-            <p class="muted">Scan the latest roles from tracked sources.</p>
-          </div>
-          <div class="section-actions">
-            <span id="resultsCount" class="count">0 jobs</span>
-          </div>
-        </div>
-
-        <div class="filters">
-          <label class="filter">
-            <input id="filterNew" type="checkbox" />
-            New only
-          </label>
-          <label class="filter">
-            <span>Source</span>
-            <select id="filterSource">
-              <option value="">All sources</option>
-            </select>
-          </label>
-        </div>
-
-        <div id="cards" class="jobs-grid"></div>
+        <div id="cards" class="cards"></div>
       </section>
     </main>
 

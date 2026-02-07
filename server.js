@@ -70,7 +70,7 @@ function isSpotifySource(url) {
 async function serveStatic(req, res) {
   const requestUrl = new URL(req.url, `http://${HOST}:${PORT}`);
   let pathname = requestUrl.pathname || "/";
-  if (pathname === "/") pathname = "/all.html";
+  if (pathname === "/") pathname = "/index.html";
   const safePath = pathname.replace(/^\/+/, "");
 
   const filePath = path.join(PUBLIC_DIR, path.normalize(safePath));
