@@ -8,14 +8,20 @@ import cron from "node-cron";
 import { parseSourceUrl } from "./source-parser.js";
 import { all, get, run } from "./db.js";
 import { refreshAllSources, refreshSource } from "./refresh.js";
+import {
+  PORT,
+  HOST,
+  STAGE,
+  CRON_HOUR,
+  CRON_TZ,
+  ENABLE_INTERNAL_CRON,
+  DB_PATH,
+} from "./stage-config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
-const HOST = process.env.HOST || "127.0.0.1";
 const PUBLIC_DIR = path.join(__dirname, "public");
-const CRON_HOUR = process.env.CRON_HOUR ? Number(process.env.CRON_HOUR) : 9;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -204,6 +210,18 @@ async function handleRefreshAll(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "GET" && req.url === "/api/health") {
+    return json(res, 200, {
+      ok: true,
+      stage: STAGE,
+      dbPath: DB_PATH,
+      internalCron: ENABLE_INTERNAL_CRON,
+      cronHour: CRON_HOUR,
+      cronTz: CRON_TZ || "local",
+      now: nowIso(),
+    });
+  }
+
   if (req.method === "POST" && req.url === "/api/parse") {
     return handleParse(req, res);
   }
@@ -313,17 +331,20 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Server running on http://${HOST}:${PORT} (stage=${STAGE})`);
 });
 
-cron.schedule(`0 ${CRON_HOUR} * * *`, async () => {
-  if (refreshInFlight) return;
-  refreshInFlight = true;
-  try {
-    await refreshAllSources();
-  } catch (err) {
-    console.error("Scheduled refresh failed", err);
-  } finally {
-    refreshInFlight = false;
-  }
-});
+if (ENABLE_INTERNAL_CRON) {
+  const cronOptions = CRON_TZ ? { timezone: CRON_TZ } : undefined;
+  cron.schedule(`0 ${CRON_HOUR} * * *`, async () => {
+    if (refreshInFlight) return;
+    refreshInFlight = true;
+    try {
+      await refreshAllSources();
+    } catch (err) {
+      console.error("Scheduled refresh failed", err);
+    } finally {
+      refreshInFlight = false;
+    }
+  }, cronOptions);
+}

@@ -18,7 +18,11 @@ Server defaults to `http://localhost:3000`. To change it, set `PORT` in a `.env`
 
 ## Database
 
-The app uses SQLite for persistence. By default the DB lives at `./data/app.db`.
+The app uses SQLite for persistence. DB path is stage-aware by default:
+
+- `STAGE=dev` -> `./data/app.dev.db`
+- `STAGE=production` -> `./data/app.production.db`
+
 You can override with:
 
 ```
@@ -31,7 +35,11 @@ A daily refresh runs at 09:00 local time. Override with:
 
 ```
 CRON_HOUR=9
+CRON_TZ=Europe/Berlin
+ENABLE_INTERNAL_CRON=true
 ```
+
+Set `ENABLE_INTERNAL_CRON=false` if you want to disable scheduler inside the web process.
 
 ## ScrapingBee (optional)
 
@@ -76,6 +84,10 @@ as a fallback when direct fetch fails.
 The server fetches the HTML, parses it with best-effort heuristics, and returns cards.
 
 ## API
+
+`GET /api/health`
+
+Returns current runtime stage and scheduler config.
 
 `POST /api/parse`
 
@@ -144,3 +156,26 @@ Specialized adapters exist for some domains to improve accuracy:
 If a domain doesn’t have a dedicated adapter, the generic parser is used.
 
 Extraction is best-effort and will vary by site structure.
+
+## Stages (dev + production)
+
+Branch mapping:
+
+- `develop` -> `dev` stage
+- `main` -> `production` stage
+
+Runtime mapping:
+
+- set `STAGE=dev` for development environment
+- set `STAGE=production` for production environment
+
+Both stages should use separate SQLite files/disks.
+
+## Render blueprint
+
+`render.yaml` contains 2 web services:
+
+- `designers-jsa-dev` (branch `develop`)
+- `designers-jsa-production` (branch `main`)
+
+Each service has its own persistent disk and DB file path.

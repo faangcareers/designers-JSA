@@ -1,12 +1,6 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import initSqlJs from "sql.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "app.db");
+import { DB_PATH } from "./stage-config.js";
 
 mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
