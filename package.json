@@ -4,8 +4,8 @@
   "description": "Designers Job Search Aggregator (Cards)",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "dev": "STAGE=dev node server.js",
+    "start": "STAGE=production node server.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",

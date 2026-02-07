@@ -12,6 +12,9 @@ import { refreshAllSources, refreshSource } from "./refresh.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const rawStage = String(process.env.STAGE || "dev").trim().toLowerCase();
+const STAGE =
+  rawStage === "prod" || rawStage === "production" ? "production" : "dev";
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const HOST = process.env.HOST || "127.0.0.1";
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -181,6 +184,15 @@ async function handleRefreshAll(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "GET" && req.url === "/api/health") {
+    return json(res, 200, {
+      ok: true,
+      stage: STAGE,
+      host: HOST,
+      port: PORT,
+    });
+  }
+
   if (req.method === "POST" && req.url === "/api/parse") {
     return handleParse(req, res);
   }
@@ -244,7 +256,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Server running on http://${HOST}:${PORT} (stage=${STAGE})`);
 });
 
 cron.schedule(`0 ${CRON_HOUR} * * *`, async () => {
