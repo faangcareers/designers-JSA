@@ -1,4 +1,4 @@
-# Designers Job Search Aggregator (Cards)
+# Designers Job Search Aggregator
 
 Paste a designer job listings URL (career page, job board search, etc.) and get the results back as clean, scannable cards.
 
