@@ -2,6 +2,16 @@
 
 Paste a designer job listings URL (career page, job board search, etc.) and get the results back as clean, scannable cards.
 
+## Skills
+
+- Node.js
+- REST APIs
+- SQLite
+- Zyte API
+- Apify API
+- Render Deployment
+- Git/GitHub
+
 ## Setup
 
 ```

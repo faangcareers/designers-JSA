@@ -6,7 +6,11 @@ import initSqlJs from "sql.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "app.db");
+const rawStage = String(process.env.STAGE || "dev").trim().toLowerCase();
+const STAGE =
+  rawStage === "prod" || rawStage === "production" ? "production" : "dev";
+const defaultDbName = STAGE === "production" ? "app.production.db" : "app.dev.db";
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", defaultDbName);
 
 mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
